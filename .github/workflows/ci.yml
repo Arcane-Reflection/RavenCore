@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Engine-only CI for the published RavenCore package (the RavenVault monorepo
+# runs its own, wider pipeline). Runner note: GitHub deprecated the macOS 14
+# runner images in 2026 and drops support on 2026-11-02; macos-15 is Apple
+# Silicon arm64 and ships Xcode 16.x with iOS 18.x simulator runtimes.
+#
+# Supply-chain posture: checkout only — no third-party actions, no SPM
+# dependencies, no caches, no tool installs, no downloads. The corpus and test
+# vectors are committed, so every job runs fully offline.
+
+jobs:
+  engine-macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error::No Xcode_16*.app found in /Applications — failing loud instead of silently falling back to the image default toolchain (swift-tools-version 6.0 requires Xcode 16+)"
+            exit 1
+          fi
+          echo "Selected Xcode: $XCODE"
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Run engine tests (includes KDBX corpus gate)
+        run: swift test
+
+  engine-ios-simulator:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error::No Xcode_16*.app found in /Applications — failing loud instead of silently falling back to the image default toolchain (swift-tools-version 6.0 requires Xcode 16+)"
+            exit 1
+          fi
+          echo "Selected Xcode: $XCODE"
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+
+      # macOS-green does not imply iOS-green: compiling and running the whole
+      # engine — including the vendored CArgon2 reference C — for the iOS arm64
+      # simulator target proves the engine works on arm64 iOS. Destination note:
+      # device names rotate as image runtimes age; if this destination
+      # disappears, `xcrun simctl list devices available` shows what the image
+      # ships and the fix is this one line.
+      - name: Run engine tests on iOS Simulator (arm64)
+        run: xcodebuild test -scheme RavenCore -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+
+  zero-network-gate:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # The zero-network product promise covers every source tree in this
+      # repository, including the vendored CArgon2 reference implementation
+      # (upstream Argon2 contains no network symbols either, so the same
+      # pattern set applies without an exclusion). A missing directory is a
+      # repository setup error, never a pass. Scoping is code directories only
+      # — docs/comment prose mentioning network symbols must not false-positive
+      # the gate.
+      - name: Zero-network grep gate
+        run: |
+          test -d Sources
+          if grep -rEn 'URLSession|NSURLSession|NWPathMonitor|NWConnection|CFNetwork|CFSocket|dataTask|uploadTask|downloadTask|Network\.framework' Sources; then
+            echo "::error::Network symbols found — the zero-network guarantee is violated"
+            exit 1
+          fi
+
+      # Public documentation must exist and must not silently rot: the gate
+      # fails the build if any published contract file goes missing.
+      - name: Docs presence gate
+        run: |
+          for f in \
+            README.md \
+            LICENSE \
+            Docs/SHAMIR-PAPER-FORMAT.md \
+            Docs/AGPL-COMMITMENT.md \
+            Docs/TEST-VECTORS/shamir-paper-v1.json \
+            Docs/TEST-VECTORS/seedqr-vectors.json; do
+            test -f "$f" || { echo "::error::Missing public doc: $f"; exit 1; }
+          done
