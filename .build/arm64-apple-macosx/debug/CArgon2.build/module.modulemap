@@ -1,0 +1,4 @@
+module CArgon2 {
+    umbrella "/private/tmp/ravencore-publish/Sources/CArgon2/include"
+    export *
+}

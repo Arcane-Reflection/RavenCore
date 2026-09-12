@@ -1,0 +1,229 @@
+{
+  "": {
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/primary.swiftdeps"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/AESECBCipher.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESECBCipher.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESECBCipher.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESECBCipher~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESECBCipher.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESECBCipher.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/AESGCMCipher.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESGCMCipher.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESGCMCipher.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESGCMCipher~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESGCMCipher.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AESGCMCipher.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/KeyDerivation.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyDerivation.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyDerivation.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyDerivation~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyDerivation.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyDerivation.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/SecureMemory.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SecureMemory.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SecureMemory.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SecureMemory~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SecureMemory.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SecureMemory.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/StreamCiphers/CRC32.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/CRC32.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/CRC32.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/CRC32~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/CRC32.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/CRC32.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/StreamCiphers/ChaCha20.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ChaCha20.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ChaCha20.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ChaCha20~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ChaCha20.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ChaCha20.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/StreamCiphers/Gzip.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Gzip.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Gzip.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Gzip~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Gzip.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Gzip.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/StreamCiphers/Salsa20.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Salsa20.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Salsa20.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Salsa20~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Salsa20.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Salsa20.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Crypto/WrappingKeyProvider.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/WrappingKeyProvider.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/WrappingKeyProvider.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/WrappingKeyProvider~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/WrappingKeyProvider.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/WrappingKeyProvider.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/BinaryIO.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/BinaryIO.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/BinaryIO.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/BinaryIO~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/BinaryIO.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/BinaryIO.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/HmacBlockStream.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/HmacBlockStream.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/HmacBlockStream.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/HmacBlockStream~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/HmacBlockStream.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/HmacBlockStream.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxCompositeKey.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCompositeKey.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCompositeKey.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCompositeKey~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCompositeKey.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCompositeKey.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxCrypto.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCrypto.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCrypto.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCrypto~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCrypto.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxCrypto.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxError.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxError.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxError.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxError~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxError.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxError.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxHeader.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxHeader.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxHeader.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxHeader~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxHeader.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxHeader.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxInnerHeader.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxInnerHeader.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxInnerHeader.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxInnerHeader~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxInnerHeader.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxInnerHeader.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxModels.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxModels.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxModels.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxModels~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxModels.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxModels.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxProtectedStream.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxProtectedStream.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxProtectedStream.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxProtectedStream~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxProtectedStream.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxProtectedStream.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxReader.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxReader.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxReader.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxReader~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxReader.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxReader.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxWriter.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxWriter.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxWriter.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxWriter~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxWriter.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxWriter.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KdbxXML.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxXML.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxXML.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxXML~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxXML.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KdbxXML.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/KeyFile.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyFile.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyFile.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyFile~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyFile.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/KeyFile.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/Passkey.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Passkey.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Passkey.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Passkey~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Passkey.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Passkey.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Keepass/VariantDictionary.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VariantDictionary.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VariantDictionary.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VariantDictionary~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VariantDictionary.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VariantDictionary.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Seed/Bip39.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Bip39.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Bip39.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Bip39~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Bip39.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/Bip39.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Seed/SeedQR.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SeedQR.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SeedQR.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SeedQR~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SeedQR.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/SeedQR.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Shamir/ShamirPaperFormat.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirPaperFormat.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirPaperFormat.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirPaperFormat~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirPaperFormat.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirPaperFormat.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Shamir/ShamirSecretSharing.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirSecretSharing.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirSecretSharing.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirSecretSharing~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirSecretSharing.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/ShamirSecretSharing.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Vault/AppendOnlyLog.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AppendOnlyLog.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AppendOnlyLog.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AppendOnlyLog~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AppendOnlyLog.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/AppendOnlyLog.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Vault/VaultModels.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultModels.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultModels.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultModels~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultModels.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultModels.dia"
+  },
+  "/private/tmp/ravencore-publish/Sources/RavenCore/Vault/VaultService.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultService.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultService.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultService~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultService.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/VaultService.dia"
+  },
+  "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/DerivedSources/resource_bundle_accessor.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/resource_bundle_accessor.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/resource_bundle_accessor.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/resource_bundle_accessor~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/resource_bundle_accessor.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/resource_bundle_accessor.dia"
+  }
+}

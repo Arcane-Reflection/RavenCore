@@ -1,0 +1,58 @@
+{
+  "checksum" : "crc-32/iso-hdlc",
+  "vectors" : [
+    {
+      "total" : 5,
+      "paper" : [
+        "041GA-090GA-W889J-GZMM3-AWGTE-W91JR-XKH73-Y0MPA-EAQYQ-S39TQ-ZGD2A-NXA5F-CFW3K-0",
+        "041GA-0H02N-0Q50E-CFVJA-VVFFZ-FB987-0DBH9-D37S3-B0NAJ-CEQ95-J61MS-XH7SC-8M5Q5-M",
+        "041GA-0S0KZ-RTDCW-1TREN-RWKMV-22SPN-ZS2B7-38SQG-FY1B8-VKA9N-AS9RT-57AE5-QM9QV-0",
+        "041GA-110C9-575G4-KGVT7-8RAMJ-JV4BW-GNY3W-VS22K-BV0C2-RJZGT-04MHD-AEB3V-2RNWG-0",
+        "041GA-190X3-XADWP-Y5R6R-BZPFP-ZJMNE-F1QSJ-NJWC0-F5MDR-FF2GA-RVWXE-JR6MJ-XRSWE-M"
+      ],
+      "secret_hex" : "080850141d55d1c4ed815441162847c75b05ab195507f6bbd4d1cef2b92d59e4",
+      "share_value_hex" : [
+        "82b8842650fd2835721a77121963b389c7e052ca72afebe469d5ff068955ea8a",
+        "15417281cc7ee4adedeffbd6941c0d5c52d19f23582aa931d7496460d33d89f2",
+        "9ff1a6b381d61d5c7274d8859b57f912ce3466f07f82b46e6a4d5594e3453a9c",
+        "624a72c09386f474615494b645f215f0f9bc88535ec0c1625f86804a45aa72c7",
+        "e8faa6f2de2e0d85fecfb7e54ab9e1be655971807968dc3de282b1be75d2c1a9"
+      ],
+      "name" : "3-of-5 with a 32-byte secret (primary recovery profile)",
+      "threshold" : 3
+    },
+    {
+      "share_value_hex" : [
+        "167764e7baa0db68002f87d6fe6bc0ff",
+        "1a8fbfe2b74d99b693e3c01b3735b736",
+        "1e2cf6e14716a7fce2a7fdab70f49a71"
+      ],
+      "paper" : [
+        "04106-08G2S-VP9SX-TM3DP-G01FG-ZBFWT-Y0ZZV-ET97P",
+        "04106-0GG3A-7VZRN-Q9PCV-D4Z3R-0DKED-DQ6TW-3Q9BN",
+        "04106-0RG3R-PFDRA-72TKZ-SRN7Z-PNQ1X-4TE41-7FQKT"
+      ],
+      "name" : "2-of-3 with a 16-byte secret",
+      "threshold" : 2,
+      "secret_hex" : "12d42de44afbe522716bba66b9aaedb8",
+      "total" : 3
+    },
+    {
+      "share_value_hex" : [
+        "35",
+        "cd"
+      ],
+      "paper" : [
+        "04104-0816Q-J3TXN-R",
+        "04104-0G1SN-AHVCP-F"
+      ],
+      "name" : "2-of-2 with a 1-byte secret (minimum-length boundary)",
+      "threshold" : 2,
+      "secret_hex" : "96",
+      "total" : 2
+    }
+  ],
+  "version" : 1,
+  "format" : "ravenvault-shamir-paper",
+  "encoding" : "crockford-base32"
+}

@@ -1,0 +1,87 @@
+{
+  "format": "ravenvault-seedqr",
+  "version": 1,
+  "note": "Standard SeedQR: each word's 0-based BIP39 index zero-padded to exactly 4 digits (48 digits for 12 words, 96 for 24). Compact SeedQR: the payload is the raw BIP39 entropy (16 bytes for 12 words, 32 for 24) per the official SeedQR spec (SeedSigner docs/seed_qr/README.md); CONTEXT D-09's '2 characters per word' parenthetical was corrected by the official spec. compact_hex therefore equals the BIP39 entropy of the mnemonic byte for byte.",
+  "source": {
+    "spec": "https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md",
+    "bip39_vectors": "Packages/RavenCore/Tests/Fixtures/Bip39/trezor-english-vectors.json (commit b57a5ad77a981e743f4167ab2f7927a55c1e82a8)",
+    "wordlist": "bip-0039/english.txt pin ce1862ac6bcffa1dd20aad858380e51e66e949ea",
+    "created": "2026-09-12",
+    "license": "MIT",
+    "note": "seedsigner-readme-example: the worked-example indices from the SeedSigner README (1924 0222 0235 1743 0631 1124 0378 1770 0641 1980 1290 1210), mnemonic resolved from the vendored English wordlist; its BIP39 checksum was verified before publication."
+  },
+  "vectors": [
+    {
+      "name": "trezor-all-zero-12w",
+      "word_count": 12,
+      "mnemonic": [
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "about"
+      ],
+      "standard_digits": "000000000000000000000000000000000000000000000003",
+      "compact_hex": "00000000000000000000000000000000"
+    },
+    {
+      "name": "trezor-24w",
+      "word_count": 24,
+      "mnemonic": [
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "art"
+      ],
+      "standard_digits": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000102",
+      "compact_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "seedsigner-readme-example",
+      "word_count": 12,
+      "mnemonic": [
+        "vacuum",
+        "bridge",
+        "buddy",
+        "supreme",
+        "exclude",
+        "milk",
+        "consider",
+        "tail",
+        "expand",
+        "wasp",
+        "pattern",
+        "nuclear"
+      ],
+      "standard_digits": "192402220235174306311124037817700641198012901210",
+      "compact_hex": "f0837875ecf4ef190bd6ea503ef2854b"
+    }
+  ]
+}

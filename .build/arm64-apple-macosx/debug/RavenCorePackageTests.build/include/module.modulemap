@@ -1,0 +1,3 @@
+module RavenCorePackageTests {
+    header "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.build/include/RavenCorePackageTests-Swift.h"
+}

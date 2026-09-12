@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.build/primary.swiftdeps"
+  },
+  "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.derived/runner.swift": {
+    "dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.build/runner.d",
+    "object": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.build/runner.swift.o",
+    "swiftmodule": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.build/runner.swiftdeps",
+    "diagnostics": "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCorePackageTests.build/runner.dia"
+  }
+}
