@@ -8,11 +8,15 @@ on:
 # Engine-only CI for the published RavenCore package (the RavenVault monorepo
 # runs its own, wider pipeline). Runner note: GitHub deprecated the macOS 14
 # runner images in 2026 and drops support on 2026-11-02; macos-15 is Apple
-# Silicon arm64 and ships Xcode 16.x with iOS 18.x simulator runtimes.
+# Silicon arm64 and ships Xcode 16.x+ with iOS simulator runtimes.
 #
 # Supply-chain posture: checkout only — no third-party actions, no SPM
 # dependencies, no caches, no tool installs, no downloads. The corpus and test
 # vectors are committed, so every job runs fully offline.
+#
+# Failure diagnostics: failing steps tee their output and re-emit the relevant
+# tail as ::error:: annotations, so the essential failure information is
+# visible without downloading logs.
 
 jobs:
   engine-macos:
@@ -22,16 +26,31 @@ jobs:
 
       - name: Select Xcode
         run: |
-          XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE" ]; then
-            echo "::error::No Xcode_16*.app found in /Applications — failing loud instead of silently falling back to the image default toolchain (swift-tools-version 6.0 requires Xcode 16+)"
+            echo "::error::No Xcode found in /Applications (swift-tools-version 6.0 requires Xcode 16+)"
             exit 1
           fi
-          echo "Selected Xcode: $XCODE"
+          MAJOR=$(defaults read "$XCODE/Contents/Info.plist" CFBundleShortVersionString | cut -d. -f1)
+          if [ "$MAJOR" -lt 16 ]; then
+            echo "::error::$XCODE is major version $MAJOR — 16+ required"
+            exit 1
+          fi
+          echo "Selected Xcode: $XCODE (major $MAJOR)"
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
 
       - name: Run engine tests (includes KDBX corpus gate)
-        run: swift test
+        shell: bash
+        run: set -o pipefail; swift test 2>&1 | tee /tmp/engine-tests.log
+
+      - name: Failure summary
+        if: failure()
+        run: |
+          {
+            echo "toolchain: $(swift --version 2>&1 | head -1)"
+            echo "── failing summary lines ──"
+            grep -E "error:|failed|Executed [0-9]+ tests|Fatal|precondition" /tmp/engine-tests.log | tail -25
+          } | while IFS= read -r line; do echo "::error::$line"; done
 
   engine-ios-simulator:
     runs-on: macos-15
@@ -40,22 +59,38 @@ jobs:
 
       - name: Select Xcode
         run: |
-          XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE" ]; then
-            echo "::error::No Xcode_16*.app found in /Applications — failing loud instead of silently falling back to the image default toolchain (swift-tools-version 6.0 requires Xcode 16+)"
+            echo "::error::No Xcode found in /Applications (swift-tools-version 6.0 requires Xcode 16+)"
             exit 1
           fi
-          echo "Selected Xcode: $XCODE"
+          MAJOR=$(defaults read "$XCODE/Contents/Info.plist" CFBundleShortVersionString | cut -d. -f1)
+          if [ "$MAJOR" -lt 16 ]; then
+            echo "::error::$XCODE is major version $MAJOR — 16+ required"
+            exit 1
+          fi
+          echo "Selected Xcode: $XCODE (major $MAJOR)"
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
 
       # macOS-green does not imply iOS-green: compiling and running the whole
       # engine — including the vendored CArgon2 reference C — for the iOS arm64
-      # simulator target proves the engine works on arm64 iOS. Destination note:
-      # device names rotate as image runtimes age; if this destination
-      # disappears, `xcrun simctl list devices available` shows what the image
-      # ships and the fix is this one line.
+      # simulator target proves the engine works on arm64 iOS. The destination
+      # omits the device name on purpose: xcodebuild picks whatever device the
+      # image's latest iOS runtime ships, so device-name rotation cannot break
+      # the gate.
       - name: Run engine tests on iOS Simulator (arm64)
-        run: xcodebuild test -scheme RavenCore -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+        shell: bash
+        run: set -o pipefail; xcodebuild test -scheme RavenCore -destination 'platform=iOS Simulator,OS=latest' 2>&1 | tee /tmp/ios-tests.log
+
+      - name: Failure summary
+        if: failure()
+        run: |
+          {
+            echo "── available simulators (iPhone) ──"
+            xcrun simctl list devices available | grep -i iphone | head -6 || true
+            echo "── failing summary lines ──"
+            grep -E "error:|Testing failed:|TEST FAILED|failed \(" /tmp/ios-tests.log | tail -25
+          } | while IFS= read -r line; do echo "::error::$line"; done
 
   zero-network-gate:
     runs-on: macos-15
