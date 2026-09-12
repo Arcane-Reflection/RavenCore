@@ -1,3 +1,0 @@
-module RavenCore {
-    header "/private/tmp/ravencore-publish/.build/arm64-apple-macosx/debug/RavenCore.build/include/RavenCore-Swift.h"
-}
