@@ -105,19 +105,26 @@ jobs:
 
       # A freshly downloaded runtime ships zero devices (simctl does not
       # auto-create defaults), so create one deterministically from the latest
-      # iOS runtime and the newest iPhone device type, and point the
-      # destination at it by name.
+      # iOS runtime and the newest iPhone device type. The raw runtime and
+      # device-type lists are emitted as annotations unconditionally for now —
+      # remove once the gate is green.
       - name: Create CI simulator device
+        shell: bash
         run: |
-          RUNTIME_ID=$(xcrun simctl list runtimes | grep -E '^iOS' | tail -1 | grep -oE 'com.apple.CoreSimulator.SimRuntime.iOS-[0-9-]+')
-          DEVTYPE_ID=$(xcrun simctl list devicetypes | grep -E '^iPhone' | tail -1 | grep -oE 'com.apple.CoreSimulator.SimDeviceType.iPhone-[A-Za-z0-9-]+')
+          set +e
+          RUNTIMES_RAW="$(xcrun simctl list runtimes 2>&1)"
+          DEVTYPE_LINE="$(xcrun simctl list devicetypes 2>&1 | grep -E '^iPhone' | tail -1)"
+          RUNTIME_ID="$(printf '%s' "$RUNTIMES_RAW" | grep -E 'SimRuntime\.iOS' | tail -1 | grep -oE 'com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9-]+' | tail -1)"
+          DEVTYPE_ID="$(printf '%s' "$DEVTYPE_LINE" | grep -oE 'com\.apple\.CoreSimulator\.SimDeviceType\.[A-Za-z0-9-]+' | tail -1)"
+          {
+            echo "── runtimes (raw tail) ──"
+            printf '%s\n' "$RUNTIMES_RAW" | tail -6
+            echo "── chosen: runtime=$RUNTIME_ID devicetype=$DEVTYPE_ID ──"
+          } | while IFS= read -r l; do echo "::error::$l"; done
           if [ -z "$RUNTIME_ID" ] || [ -z "$DEVTYPE_ID" ]; then
-            echo "::error::runtime=$RUNTIME_ID devicetype=$DEVTYPE_ID — cannot create simulator"
-            xcrun simctl list runtimes
-            xcrun simctl list devicetypes | grep iPhone
+            echo "::error::cannot resolve runtime/devicetype — see annotations above"
             exit 1
           fi
-          echo "Creating device from $DEVTYPE_ID / $RUNTIME_ID"
           xcrun simctl create ci-iphone "$DEVTYPE_ID" "$RUNTIME_ID"
 
       - name: Run engine tests on iOS Simulator (arm64)
