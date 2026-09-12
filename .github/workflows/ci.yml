@@ -103,9 +103,26 @@ jobs:
             xcrun simctl list devices available | tail -12 || true
           } | while IFS= read -r line; do echo "::error::$line"; done
 
+      # A freshly downloaded runtime ships zero devices (simctl does not
+      # auto-create defaults), so create one deterministically from the latest
+      # iOS runtime and the newest iPhone device type, and point the
+      # destination at it by name.
+      - name: Create CI simulator device
+        run: |
+          RUNTIME_ID=$(xcrun simctl list runtimes | grep -E '^iOS' | tail -1 | grep -oE 'com.apple.CoreSimulator.SimRuntime.iOS-[0-9-]+')
+          DEVTYPE_ID=$(xcrun simctl list devicetypes | grep -E '^iPhone' | tail -1 | grep -oE 'com.apple.CoreSimulator.SimDeviceType.iPhone-[A-Za-z0-9-]+')
+          if [ -z "$RUNTIME_ID" ] || [ -z "$DEVTYPE_ID" ]; then
+            echo "::error::runtime=$RUNTIME_ID devicetype=$DEVTYPE_ID — cannot create simulator"
+            xcrun simctl list runtimes
+            xcrun simctl list devicetypes | grep iPhone
+            exit 1
+          fi
+          echo "Creating device from $DEVTYPE_ID / $RUNTIME_ID"
+          xcrun simctl create ci-iphone "$DEVTYPE_ID" "$RUNTIME_ID"
+
       - name: Run engine tests on iOS Simulator (arm64)
         shell: bash
-        run: set -o pipefail; xcodebuild test -scheme RavenCore -destination 'platform=iOS Simulator,OS=latest' 2>&1 | tee /tmp/ios-tests.log
+        run: set -o pipefail; xcodebuild test -scheme RavenCore -destination 'name=ci-iphone' 2>&1 | tee /tmp/ios-tests.log
 
       - name: Failure summary
         if: failure()
