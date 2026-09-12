@@ -77,66 +77,22 @@ jobs:
 
       # macOS-green does not imply iOS-green: compiling and running the whole
       # engine — including the vendored CArgon2 reference C — for the iOS arm64
-      # simulator target proves the engine works on arm64 iOS. The destination
-      # omits the device name on purpose: xcodebuild picks whatever device the
-      # image's latest iOS runtime ships, so device-name rotation cannot break
-      # the gate. Runner images no longer preinstall the iOS simulator runtime,
-      # so fetch it with Apple's official platform installer first (this is the
-      # platform SDK itself, fetched from Apple through the runner's own
-      # toolchain — not a third-party dependency).
-      - name: Install iOS simulator runtime
-        shell: bash
-        run: |
-          sudo xcodebuild -runFirstLaunch
-          set -o pipefail
-          xcodebuild -downloadPlatform iOS 2>&1 | tee /tmp/platform-install.log
-
-      - name: Runtime install diagnostics
-        if: failure()
-        run: |
-          {
-            echo "── platform install tail ──"
-            tail -12 /tmp/platform-install.log 2>/dev/null || echo "(no install log)"
-            echo "── runtimes ──"
-            xcrun simctl runtime list 2>&1 | head -6 || true
-            echo "── devices (available) ──"
-            xcrun simctl list devices available | tail -12 || true
-          } | while IFS= read -r line; do echo "::error::$line"; done
-
-      # A freshly downloaded runtime ships zero devices (simctl does not
-      # auto-create defaults), so create one deterministically from the latest
-      # iOS runtime and the newest iPhone device type. The raw runtime and
-      # device-type lists are emitted as annotations unconditionally for now —
-      # remove once the gate is green.
-      - name: Create CI simulator device
-        shell: bash
-        run: |
-          set +e
-          RUNTIMES_RAW="$(xcrun simctl list runtimes 2>&1)"
-          DEVTYPE_LINE="$(xcrun simctl list devicetypes 2>&1 | grep -E '^iPhone' | tail -1)"
-          RUNTIME_ID="$(printf '%s' "$RUNTIMES_RAW" | grep -E 'SimRuntime\.iOS' | tail -1 | grep -oE 'com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9-]+' | tail -1)"
-          DEVTYPE_ID="$(printf '%s' "$DEVTYPE_LINE" | grep -oE 'com\.apple\.CoreSimulator\.SimDeviceType\.[A-Za-z0-9-]+' | tail -1)"
-          {
-            echo "── runtimes (raw tail) ──"
-            printf '%s\n' "$RUNTIMES_RAW" | tail -6
-            echo "── chosen: runtime=$RUNTIME_ID devicetype=$DEVTYPE_ID ──"
-          } | while IFS= read -r l; do echo "::error::$l"; done
-          if [ -z "$RUNTIME_ID" ] || [ -z "$DEVTYPE_ID" ]; then
-            echo "::error::cannot resolve runtime/devicetype — see annotations above"
-            exit 1
-          fi
-          xcrun simctl create ci-iphone "$DEVTYPE_ID" "$RUNTIME_ID"
-
+      # simulator target proves the engine works on arm64 iOS. The image
+      # preinstalls an iOS runtime with the current iPhone device family;
+      # destination pins the device NAME only (no OS), so runtime rotation
+      # cannot break the gate. Do NOT add `OS=latest`: a newer runtime
+      # installed alongside the preinstalled one would resolve "latest" to a
+      # runtime that has no devices.
       - name: Run engine tests on iOS Simulator (arm64)
         shell: bash
-        run: set -o pipefail; xcodebuild test -scheme RavenCore -destination 'name=ci-iphone' 2>&1 | tee /tmp/ios-tests.log
+        run: set -o pipefail; xcodebuild test -scheme RavenCore -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 | tee /tmp/ios-tests.log
 
       - name: Failure summary
         if: failure()
         run: |
           {
-            echo "── available simulators (iPhone) ──"
-            xcrun simctl list devices available | grep -i iphone | head -6 || true
+            echo "── available simulators ──"
+            xcrun simctl list devices available | tail -15 || true
             echo "── failing summary lines ──"
             grep -E "error:|Testing failed:|TEST FAILED|failed \(" /tmp/ios-tests.log | tail -25
           } | while IFS= read -r line; do echo "::error::$line"; done
