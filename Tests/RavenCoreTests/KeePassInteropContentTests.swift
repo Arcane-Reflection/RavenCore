@@ -6,7 +6,8 @@ import XCTest
 /// KeePassXC-compatible KDBX 4.0 file (KDBXKit interop fixture, password "123").
 final class KeePassInteropContentTests: XCTestCase {
     func testExternalKDBX4FixtureProtectedValues() throws {
-        let data = try Data(contentsOf: URL(fileURLWithPath: "/Users/umaj35ty/Projects/ios/RavenVault/Packages/RavenCore/Tests/Fixtures/External/ext-kdbxkit-simple.kdbx"))
+        let data = try Data(contentsOf: URL(fileURLWithPath: TestFixtures.packageRoot
+            .appending("/Tests/Fixtures/External/ext-kdbxkit-simple.kdbx")))
         let creds = try KdbxReader.Credentials(password: "123")
         let doc = try KdbxReader.read(data, credentials: creds)
         print("EXT-ENTRIES:", doc.root.allEntries().count)

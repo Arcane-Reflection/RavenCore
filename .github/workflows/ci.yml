@@ -12,7 +12,8 @@ on:
 #
 # Supply-chain posture: checkout only — no third-party actions, no SPM
 # dependencies, no caches, no tool installs, no downloads. The corpus and test
-# vectors are committed, so every job runs fully offline.
+# vectors are committed, so every job runs fully offline (the one
+# sanctioned fetch is Apple's iOS simulator runtime installer above).
 #
 # Failure diagnostics: failing steps tee their output and re-emit the relevant
 # tail as ::error:: annotations, so the essential failure information is
@@ -77,7 +78,13 @@ jobs:
       # simulator target proves the engine works on arm64 iOS. The destination
       # omits the device name on purpose: xcodebuild picks whatever device the
       # image's latest iOS runtime ships, so device-name rotation cannot break
-      # the gate.
+      # the gate. Runner images no longer preinstall the iOS simulator runtime,
+      # so fetch it with Apple's official platform installer first (this is the
+      # platform SDK itself, fetched from Apple through the runner's own
+      # toolchain — not a third-party dependency).
+      - name: Install iOS simulator runtime
+        run: xcodebuild -downloadPlatform iOS
+
       - name: Run engine tests on iOS Simulator (arm64)
         shell: bash
         run: set -o pipefail; xcodebuild test -scheme RavenCore -destination 'platform=iOS Simulator,OS=latest' 2>&1 | tee /tmp/ios-tests.log

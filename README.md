@@ -1,7 +1,5 @@
 # RavenCore
 
-[![CI](https://github.com/Arcane-Reflection/RavenCore/actions/workflows/ci.yml/badge.svg)](https://github.com/Arcane-Reflection/RavenCore/actions/workflows/ci.yml)
-
 MIT-licensed open-source engine of **RavenVault** — an offline-first,
 one-time-purchase iOS password vault and seed-phrase cold storage. RavenVault is
 open core: the engine (formats, cryptography, recovery math) lives here under MIT
