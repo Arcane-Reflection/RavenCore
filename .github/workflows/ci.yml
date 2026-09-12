@@ -39,6 +39,7 @@ jobs:
           fi
           echo "Selected Xcode: $XCODE (major $MAJOR)"
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+          sudo xcode-select -s "$XCODE"
 
       - name: Run engine tests (includes KDBX corpus gate)
         shell: bash
@@ -72,6 +73,7 @@ jobs:
           fi
           echo "Selected Xcode: $XCODE (major $MAJOR)"
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+          sudo xcode-select -s "$XCODE"
 
       # macOS-green does not imply iOS-green: compiling and running the whole
       # engine — including the vendored CArgon2 reference C — for the iOS arm64
@@ -83,7 +85,23 @@ jobs:
       # platform SDK itself, fetched from Apple through the runner's own
       # toolchain — not a third-party dependency).
       - name: Install iOS simulator runtime
-        run: xcodebuild -downloadPlatform iOS
+        shell: bash
+        run: |
+          sudo xcodebuild -runFirstLaunch
+          set -o pipefail
+          xcodebuild -downloadPlatform iOS 2>&1 | tee /tmp/platform-install.log
+
+      - name: Runtime install diagnostics
+        if: failure()
+        run: |
+          {
+            echo "── platform install tail ──"
+            tail -12 /tmp/platform-install.log 2>/dev/null || echo "(no install log)"
+            echo "── runtimes ──"
+            xcrun simctl runtime list 2>&1 | head -6 || true
+            echo "── devices (available) ──"
+            xcrun simctl list devices available | tail -12 || true
+          } | while IFS= read -r line; do echo "::error::$line"; done
 
       - name: Run engine tests on iOS Simulator (arm64)
         shell: bash
