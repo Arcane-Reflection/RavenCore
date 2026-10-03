@@ -108,7 +108,14 @@ public enum VaultCSVMapper {
             var totpSecret: String?
             let rawTotp = field(.totp)
             if !rawTotp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                if let secret = otpauthSecret(from: rawTotp) {
+                if OTPAuthURIParser.parse(rawTotp) != nil {
+                    // A full otpauth URI is stored VERBATIM so generation
+                    // parameters (period/digits/algorithm) survive — RFC
+                    // defaults would confidently serve wrong codes for
+                    // non-default entries (261003-mk7 second pass; the old
+                    // bare-secret strip broke both import paths alike).
+                    totpSecret = rawTotp.trimmingCharacters(in: .whitespacesAndNewlines)
+                } else if let secret = otpauthSecret(from: rawTotp) {
                     totpSecret = secret
                 } else {
                     // Unreadable TOTP value → empty + flag; the record still

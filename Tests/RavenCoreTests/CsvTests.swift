@@ -179,7 +179,9 @@ final class CsvTests: XCTestCase {
         XCTAssertEqual(github.password, "pw-github-1")
         XCTAssertEqual(github.url, "https://github.com")
         XCTAssertEqual(github.notes, "Dev account, primary")
-        XCTAssertEqual(github.totpSecret, "JBSWY3DPEHPK3PXP", "otpauth URI → secret parameter")
+        XCTAssertEqual(
+            github.totpSecret, "otpauth://totp/GitHub:alice?secret=JBSWY3DPEHPK3PXP&issuer=GitHub",
+            "otpauth URI stored verbatim — parameters survive (261003-mk7 second pass)")
         XCTAssertEqual(github.sourceRow, 1)
         XCTAssertFalse(github.flagged)
 
@@ -210,7 +212,10 @@ final class CsvTests: XCTestCase {
         mapping[.totp] = .some(5) // manual remap
         let records = VaultCSVMapper.mapRows(document: document, mapping: mapping)
 
-        XCTAssertEqual(records[0].totpSecret, "KRMVATZTJF6UC55V", "URI secret extracted; issuer/period/digits dropped")
+        XCTAssertEqual(
+            records[0].totpSecret,
+            "otpauth://totp/ivy?secret=KRMVATZTJF6UC55V&period=30&digits=6&issuer=Example",
+            "URI stored verbatim — period/digits/issuer preserved (261003-mk7 second pass: dropping them made generation fall back to RFC defaults)")
         XCTAssertFalse(records[0].flagged)
         XCTAssertEqual(records[1].totpSecret, "JBSWY3DPEHPK3PXPUZRQ", "bare secret stored verbatim")
         XCTAssertFalse(records[1].flagged)

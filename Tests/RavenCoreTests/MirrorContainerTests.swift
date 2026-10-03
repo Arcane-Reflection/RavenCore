@@ -108,6 +108,25 @@ final class MirrorContainerTests: XCTestCase {
         expectDecryptError(container, .kdfUnsupported(2))
     }
 
+    /// Hostile-header ceilings (261003-mk7 second pass): memory and
+    /// parallelism claims above `KeyDerivation.hostileMax*` fail typed at the
+    /// header boundary — before any Argon2 work and before the GCM check that
+    /// used to be the only guard.
+    func testHostileKDFParametersFailClosedAtHeader() throws {
+        var hugeMemory = try Self.fixtureContainer()
+        // Header layout: magic(0-3) version(4-5) kdf(6) memoryKiB BE(7-10)
+        // timeCost(11) parallelism(12). 1.5 GiB in KiB = 0x00180000.
+        hugeMemory[7] = 0x00
+        hugeMemory[8] = 0x18
+        hugeMemory[9] = 0x00
+        hugeMemory[10] = 0x00
+        expectDecryptError(hugeMemory, .kdfParametersUnsupported)
+
+        var manyThreads = try Self.fixtureContainer()
+        manyThreads[12] = 17
+        expectDecryptError(manyThreads, .kdfParametersUnsupported)
+    }
+
     func testTruncatedBodyFailsClosed() throws {
         var container = try Self.fixtureContainer()
         container = container.dropLast(5)

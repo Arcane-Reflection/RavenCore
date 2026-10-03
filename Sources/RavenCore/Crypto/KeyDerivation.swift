@@ -28,6 +28,21 @@ public enum KeyDerivation {
     /// Argon2id parallelism (D-01).
     public static let argon2Parallelism = 2
 
+    /// Hostile-input ceilings for KDF parameters read from UNTRUSTED headers
+    /// (kdbx outer header, RVMI mirror header, vault header). One vocabulary
+    /// for every header-driven path: above KeePassXC's realistic benchmark /
+    /// UI scale (its benchmark lands ≈2^25 AES-KDF rounds and its own reader
+    /// accepts up to 4 GiB — but desktop reality sits well under 1 GiB), and
+    /// below the iOS jetsam threshold, so a crafted header gets a typed
+    /// rejection instead of a silent jetsam-scale allocation (FI-08 scale,
+    /// T-02-03 family; unified in the 261003-mk7 second pass — the three
+    /// entry points previously drifted, admitting 4 GiB pre-auth).
+    public static let hostileMaxMemoryKiB = 1_048_576
+    /// Hostile ceiling for the Argon2 time cost.
+    public static let hostileMaxTimeCost = 1 << 24
+    /// Hostile ceiling for the Argon2 parallelism.
+    public static let hostileMaxParallelism = 16
+
     /// Derives a 32-byte Argon2d key (version 0x13). Same reference core as
     /// Argon2id with type 0 — required to read legacy KDF choices in kdbx files.
     public static func argon2d(
@@ -67,12 +82,12 @@ public enum KeyDerivation {
         // C core enforces the p factor itself); it deliberately matches the
         // kdbx-layer clamp in KdbxKeyComponents so both layers agree and no
         // foreign error type can escape at the seam (02-REVIEW-FULL FW-03).
-        // The timeCost ceiling guards the UInt32 cast below against silent
-        // truncation (FI-08 / I-01 family).
+        // The ceilings are the shared hostile-header caps above — one
+        // vocabulary for every header-driven path (261003-mk7 second pass).
         guard !password.isEmpty, !salt.isEmpty,
-              memoryKiB >= 8, memoryKiB <= 4_194_304,
-              timeCost >= 1, timeCost <= Int(UInt32.max),
-              parallelism >= 1, parallelism <= 16 else {
+              memoryKiB >= 8, memoryKiB <= hostileMaxMemoryKiB,
+              timeCost >= 1, timeCost <= hostileMaxTimeCost,
+              parallelism >= 1, parallelism <= hostileMaxParallelism else {
             throw KeyDerivationError.invalidParameter
         }
         var output = Data(repeating: 0, count: 32)

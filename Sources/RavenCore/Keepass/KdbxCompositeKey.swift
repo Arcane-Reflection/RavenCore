@@ -71,8 +71,11 @@ public struct KdbxKeyComponents: Sendable, Equatable {
         // File unit for M is BYTES (KeePassXC writes KiB × 1024).
         let memoryKiB = memoryBytes / 1024
         // Clamp DoS vectors (threat T-02-03) without rejecting legitimate
-        // desktop-created files (KeePassXC uses P up to core count).
-        guard memoryKiB >= 8, memoryKiB <= 4_194_304, iterations <= 1 << 24, parallelism <= 16 else {
+        // desktop-created files (KeePassXC uses P up to core count). Memory
+        // ceiling = the shared hostile-header cap (261003-mk7 second pass —
+        // was 4 GiB, admitting a jetsam-scale pre-auth allocation).
+        guard memoryKiB >= 8, memoryKiB <= KeyDerivation.hostileMaxMemoryKiB,
+              iterations <= KeyDerivation.hostileMaxTimeCost, parallelism <= KeyDerivation.hostileMaxParallelism else {
             throw KdbxError.unsupportedKdfParameters
         }
         // Version V must be 0x13 (Argon2 1.3); K (secret) and A (associated

@@ -117,6 +117,42 @@ final class Kdbx31ReadTests: XCTestCase {
         XCTAssertEqual(reopened.root.name, "Upgraded")
     }
 
+    /// An explicit `options.version = .v31` clamps to 4.0 as well
+    /// (261003-mk7 second pass): the pipeline is pure 4.x, so honoring the
+    /// request verbatim would emit a 3.1 signature over a 4.x body — a file
+    /// no reader (including this one) opens.
+    func testExplicitV31WriteOptionClampsToV40() throws {
+        var document = KdbxDocument()
+        document.root = KdbxGroup(name: "Clamped")
+        var options = KdbxWriter.Options.argon2idDefaults()
+        options.version = .v31
+        let credentials = try KdbxReader.Credentials(password: "pw")
+        let data = try KdbxWriter.write(document, credentials: credentials, options: options)
+        var reader = ByteReader(data)
+        _ = try reader.readBytes(8)
+        XCTAssertEqual(try reader.readUInt32(), KdbxOuterHeader.version40)
+        let reopened = try KdbxReader.read(data, credentials: credentials)
+        XCTAssertEqual(reopened.version, .v40)
+    }
+
+    /// A 3.1 file merely OMITTING a required header field (here: field 9,
+    /// StreamStartBytes) must fail with `corruptFile` at the header boundary
+    /// — before the composite key / KDF work (261003-mk7 second pass hoist;
+    /// the absurd declared rounds prove the KDF never runs).
+    func testMissingRequiredFieldFailsBeforeKDF() throws {
+        let password = "legacy-v31-passphrase"
+        let file = try makeV31File(
+            password: password,
+            declaredRounds: AESECBCipher.maxKdfRounds + 1,
+            omitFields: [9])
+        let credentials = try KdbxReader.Credentials(password: password)
+        let start = Date()
+        XCTAssertThrowsError(try KdbxReader.read(file, credentials: credentials)) { error in
+            XCTAssertEqual(error as? KdbxError, .corruptFile)
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(start), 1.0)
+    }
+
     // MARK: - Helpers
 
     /// Builds the minimal 3.1 file shared by the positive read test and the
@@ -128,7 +164,8 @@ final class Kdbx31ReadTests: XCTestCase {
         password: String,
         keyFileKey: Data? = nil,
         declaredRounds: UInt64 = 1_000,
-        cipherUUID: UUID? = KdbxCrypto.aesCipherUUID
+        cipherUUID: UUID? = KdbxCrypto.aesCipherUUID,
+        omitFields: Set<UInt8> = []
     ) throws -> Data {
         let masterSeed = SecureRandom.bytes(count: 32)
         let transformSeed = SecureRandom.bytes(count: 32)
@@ -165,20 +202,20 @@ final class Kdbx31ReadTests: XCTestCase {
         headerBytes.writeUInt32(KdbxOuterHeader.signature1)
         headerBytes.writeUInt32(KdbxOuterHeader.signature2)
         headerBytes.writeUInt32(KdbxOuterHeader.version31)
-        if let cipherUUID {
+        if let cipherUUID, !omitFields.contains(2) {
             writeField(&headerBytes, id: 2, value: cipherUUID.data)
         }
-        writeField(&headerBytes, id: 4, value: masterSeed)
-        writeField(&headerBytes, id: 5, value: transformSeed)
+        if !omitFields.contains(4) { writeField(&headerBytes, id: 4, value: masterSeed) }
+        if !omitFields.contains(5) { writeField(&headerBytes, id: 5, value: transformSeed) }
         var roundsBytes = ByteWriter()
         roundsBytes.writeUInt64(declaredRounds)
-        writeField(&headerBytes, id: 6, value: roundsBytes.data)
-        writeField(&headerBytes, id: 7, value: iv)
-        writeField(&headerBytes, id: 8, value: protectedKey)
-        writeField(&headerBytes, id: 9, value: streamStart)
+        if !omitFields.contains(6) { writeField(&headerBytes, id: 6, value: roundsBytes.data) }
+        if !omitFields.contains(7) { writeField(&headerBytes, id: 7, value: iv) }
+        if !omitFields.contains(8) { writeField(&headerBytes, id: 8, value: protectedKey) }
+        if !omitFields.contains(9) { writeField(&headerBytes, id: 9, value: streamStart) }
         var salsaID = ByteWriter()
         salsaID.writeInt32(2)
-        writeField(&headerBytes, id: 10, value: salsaID.data)
+        if !omitFields.contains(10) { writeField(&headerBytes, id: 10, value: salsaID.data) }
 
         let rawHeader = headerBytes.data
         var endField = ByteWriter()

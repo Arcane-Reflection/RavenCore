@@ -149,10 +149,14 @@ public final class VaultService {
             // FI-08: header fields are untrusted until the GCM check
             // authenticates them. No app-written vault can exceed the D-01
             // defaults (m = 64 MiB, t = 3, p = 2 — rewrap writes the same),
-            // and future presets (D-02) keep huge headroom, so these policy
-            // caps keep a tampered header from triggering a jetsam-scale
-            // Argon2 allocation on iOS instead of a clean typed failure.
-            guard memoryKiB <= 1_048_576, timeCost <= 1 << 24, parallelism <= 16 else {
+            // and future presets (D-02) keep huge headroom. The caps are the
+            // shared hostile-header vocabulary (261003-mk7 second pass —
+            // identical to the kdbx and mirror paths), keeping a tampered
+            // header from triggering a jetsam-scale Argon2 allocation on iOS
+            // instead of a clean typed failure.
+            guard memoryKiB <= KeyDerivation.hostileMaxMemoryKiB,
+                  timeCost <= KeyDerivation.hostileMaxTimeCost,
+                  parallelism <= KeyDerivation.hostileMaxParallelism else {
                 throw VaultError.corruptDocument
             }
             do {

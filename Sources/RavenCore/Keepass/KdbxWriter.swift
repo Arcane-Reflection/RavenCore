@@ -57,9 +57,15 @@ public enum KdbxWriter {
         binaries: [KdbxInnerHeader.Binary] = [],
         options: Options = .argon2idDefaults()
     ) throws -> Data {
-        // 3.1 documents upgrade to 4.0 unconditionally (D-05).
+        // 3.1 documents upgrade to 4.0 unconditionally (D-05), and so does an
+        // explicit `options.version = .v31` — the pipeline below is pure 4.x
+        // (HMAC block framing, variant-dict KDF), so honoring a 3.1 request
+        // verbatim would emit a file no reader (including this one) opens.
+        // The clamped version drives BOTH the XML Times emission and the
+        // outer header.
         var doc = document
-        doc.version = options.version
+        let writeVersion = options.version.major < 4 ? KdbxVersion.v40 : options.version
+        doc.version = writeVersion
 
         // ⟳ values are always regenerated.
         let masterSeed = SecureRandom.bytes(count: 32)
@@ -71,7 +77,7 @@ public enum KdbxWriter {
         kdf["S"] = .byteArray(SecureRandom.bytes(count: 32))
 
         let header = KdbxOuterHeader(
-            version: (options.version.major << 16) | options.version.minor,
+            version: (writeVersion.major << 16) | writeVersion.minor,
             cipherId: options.cipherId,
             compression: options.compression,
             masterSeed: masterSeed,

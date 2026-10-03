@@ -146,6 +146,13 @@ public enum KdbxReader {
         // step — reject unsupported ciphers before any key derivation runs
         // (a foreign-cipher file used to burn the full AES-KDF first).
         guard cipherId == KdbxCrypto.aesCipherUUID else { throw KdbxError.unsupportedCipher }
+        // Required-field presence, also pre-KDF (261003-mk7 second pass): a
+        // file merely omitting field 7/8/9 must fail at the header boundary,
+        // not after the full KDF — KeePassXC validates its required header
+        // fields before setKey. Salsa20/ChaCha20 keys are 32 bytes, CBC IV
+        // is 16, StreamStartBytes is 32.
+        guard streamStartBytes.count == 32, encryptionIV.count == 16,
+              protectedStreamKey.count == 32 else { throw KdbxError.corruptFile }
         // 3.1 KDF is fixed: AES-KDF with transformSeed/rounds. Field 6's R is
         // hostile input: on 3.1 the KDF runs BEFORE the StreamStartBytes check
         // (no header HMAC era). `aesKdf` already caps rounds at this same
@@ -159,8 +166,6 @@ public enum KdbxReader {
         // SHA-256(MasterSeed ‖ transformedKey). The AES-KDF itself already
         // includes a final SHA-256 over the ECB round output.
         let cipherKey = Hmac.sha256(masterSeed + transformed)
-
-        guard streamStartBytes.count == 32 else { throw KdbxError.corruptFile }
 
         // Decrypt whole body, then verify StreamStartBytes prefix (MAC-then-encrypt era).
         let body = try reader.readBytes(reader.remaining)

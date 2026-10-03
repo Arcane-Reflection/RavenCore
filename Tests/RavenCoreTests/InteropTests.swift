@@ -318,6 +318,13 @@ final class InteropTests: XCTestCase {
         var timeOtp = KdbxEntry()
         timeOtp.setValue("Title", "TimeOtp entry")
         timeOtp.setValue("TimeOtp-Secret-Base32", "JBSWY3DPEHPK3PXP")
+        // Non-default generation parameters must ride into the stored URI
+        // (261003-mk7 second pass: they were dropped, so generation fell
+        // back to RFC defaults and served wrong codes for SHA256/8-digit
+        // entries).
+        timeOtp.setValue("TimeOtp-Algorithm", "SHA256")
+        timeOtp.setValue("TimeOtp-Length", "8")
+        timeOtp.setValue("TimeOtp-Period", "60")
         document.root.entries.append(timeOtp)
 
         var otpauth = KdbxEntry()
@@ -325,17 +332,128 @@ final class InteropTests: XCTestCase {
         otpauth.setValue("otp", "otpauth://totp/Eg?secret=ABC234DEF&issuer=Me")
         document.root.entries.append(otpauth)
 
+        var hexSeed = KdbxEntry()
+        hexSeed.setValue("Title", "hex seed entry")
+        // Hex seeds (KeePassOTP plugin layout) must be converted, not stored
+        // verbatim — a hex string is not Base32 and would decode to wrong
+        // bytes (or fail outright on 0/1/8/9).
+        hexSeed.setValue("TimeOtp-Secret-Hex", "FFFEDCBA9876543210")
+        document.root.entries.append(hexSeed)
+
         var plain = KdbxEntry()
         plain.setValue("Title", "plain entry")
         plain.setValue("otp", "not-a-uri")
         document.root.entries.append(plain)
 
+        var steam = KdbxEntry()
+        steam.setValue("Title", "steam entry")
+        steam.setValue("otp", "otpauth://totp/Steam:me?secret=JBSWY3DPEHPK3PXP&period=30&digits=5&issuer=Steam")
+        document.root.entries.append(steam)
+
+        var duplicateKey = KdbxEntry()
+        duplicateKey.setValue("Title", "duplicate key entry")
+        duplicateKey.setValue("otp", "key=JBSWY3DPEHPK3PXP&key=BBBB&step=30")
+        document.root.entries.append(duplicateKey)
+
         let content = try KdbxVaultMapper.nativeVault(from: document)
-        XCTAssertEqual(content.records.first { $0.payload.title == "TimeOtp entry" }?.payload.totpSecret,
-                       "JBSWY3DPEHPK3PXP")
+        let timeOtpURI = content.records.first { $0.payload.title == "TimeOtp entry" }?.payload.totpSecret
+        XCTAssertEqual(timeOtpURI, "otpauth://totp/TimeOtp%20entry:none?secret=JBSWY3DPEHPK3PXP&period=60&digits=8&issuer=TimeOtp%20entry&algorithm=SHA256")
+        // The synthesized URI must parse back to the declared parameters.
+        let parameters = timeOtpURI.flatMap(OTPAuthURIParser.parse)
+        XCTAssertEqual(parameters?.algorithm, .sha256)
+        XCTAssertEqual(parameters?.digits, 8)
+        XCTAssertEqual(parameters?.period, 60)
+
         XCTAssertEqual(content.records.first { $0.payload.title == "otpauth entry" }?.payload.totpSecret,
-                       "ABC234DEF")
-        XCTAssertNil(content.records.first { $0.payload.title == "plain entry" }?.payload.totpSecret)
+                       "otpauth://totp/Eg?secret=ABC234DEF&issuer=Me",
+                       "canonical otp attribute with a URI is stored verbatim")
+
+        // Hex seed converts to Base32 of the same bytes (0xFFFEDCBA9876543210).
+        let hexURI = content.records.first { $0.payload.title == "hex seed entry" }?.payload.totpSecret
+        XCTAssertNotNil(hexURI)
+        XCTAssertEqual(hexURI.flatMap(OTPAuthURIParser.parse)?.secret,
+                       Base32.encode([0xFF, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10]))
+
+        XCTAssertNil(content.records.first { $0.payload.title == "plain entry" }?.payload.totpSecret,
+                     "unparseable otp value → absent, never silently consumed")
+
+        // digits=5 (KeePassXC Steam preset) is outside the engine generation
+        // domain — strict parse fails, but the seed must survive via the
+        // lenient fallback (third-pass review: it used to drop silently).
+        XCTAssertEqual(
+            content.records.first { $0.payload.title == "steam entry" }?.payload.totpSecret,
+            "JBSWY3DPEHPK3PXP")
+
+        // Duplicate query keys in a hostile otp value must not trap the
+        // importer (third-pass review: Dictionary(uniqueKeysWithValues:));
+        // last-wins folding yields the synthesized URI for the surviving key.
+        let duplicateURI = content.records.first { $0.payload.title == "duplicate key entry" }?.payload.totpSecret
+        XCTAssertEqual(OTPAuthURIParser.parse(try XCTUnwrap(duplicateURI))?.secret, "BBBB")
+    }
+
+    /// TOTP export (261003-mk7 second pass): a URI-carrying payload exports
+    /// the canonical protected `otp` attribute VERBATIM (parameters survive),
+    /// a bare-seed payload exports a synthesized KeePassXC-shape URI, and
+    /// both read back into the same payload semantics through the full
+    /// write→read cycle.
+    func testTOTPExportWritesCanonicalOtpAndRoundTrips() throws {
+        let vault = try VaultService.create(passphrase: "totp-export")
+        let uri = "otpauth://totp/GitHub:alice?secret=JBSWY3DPEHPK3PXP&period=30&digits=6&issuer=GitHub"
+        try vault.add(.password, level: .auto,
+                      payload: RecordPayload(title: "URI carrier", password: "p1", totpSecret: uri))
+        try vault.add(.password, level: .auto,
+                      payload: RecordPayload(title: "Seed carrier", password: "p2", totpSecret: "JBSWY3DPEHPK3PXP"))
+
+        let records = try vault.records()
+        let (document, binaries) = try KdbxVaultMapper.kdbxDocument(from: .init(
+            records: records, versions: vault.allVersions(),
+            folders: vault.folders(), includedIDs: Set(records.map(\.id))))
+
+        // Canonical KeePassXC emission shape at the document level.
+        let uriEntry = try XCTUnwrap(document.root.allEntries().first { $0.name == "URI carrier" })
+        XCTAssertEqual(uriEntry.value("otp"), uri, "URI exported verbatim")
+        let seedEntry = try XCTUnwrap(document.root.allEntries().first { $0.name == "Seed carrier" })
+        let synthesized = try XCTUnwrap(seedEntry.value("otp"))
+        XCTAssertTrue(synthesized.hasPrefix("otpauth://totp/"), "bare seed wrapped in a synthesized URI")
+        XCTAssertEqual(OTPAuthURIParser.parse(synthesized)?.secret, "JBSWY3DPEHPK3PXP")
+        XCTAssertTrue(
+            uriEntry.strings.first { $0.key == "otp" }?.protected == true,
+            "a TOTP seed is a secret")
+
+        let data = try KdbxWriter.write(document, credentials: .init(password: "totp-export"), binaries: binaries)
+        let back = try KdbxReader.read(data, credentials: .init(password: "totp-export"))
+        XCTAssertEqual(try XCTUnwrap(back.root.allEntries().first { $0.name == "URI carrier" }).value("otp"), uri,
+                       "URI survives the kdbx write/read cycle verbatim")
+
+        let remapped = try KdbxVaultMapper.nativeVault(from: back)
+        XCTAssertEqual(remapped.records.first { $0.payload.title == "URI carrier" }?.payload.totpSecret, uri)
+        XCTAssertEqual(
+            OTPAuthURIParser.parse(
+                try XCTUnwrap(remapped.records.first { $0.payload.title == "Seed carrier" }?.payload.totpSecret)
+            )?.secret, "JBSWY3DPEHPK3PXP")
+    }
+
+    /// Tags use the KeePass delimiter set on import (`;` `,` tab) and the
+    /// KeePassXC-canonical `,` on export; a tag may contain spaces.
+    func testTagsUseKeePassDelimiterSet() throws {
+        var document = KdbxDocument()
+        var entry = KdbxEntry()
+        entry.setValue("Title", "Tagged")
+        entry.tags = "work;personal,dev web\turgent"
+        document.root.entries.append(entry)
+
+        let content = try KdbxVaultMapper.nativeVault(from: document)
+        XCTAssertEqual(content.records.first?.tags, ["work", "personal", "dev web", "urgent"])
+
+        let vault = try VaultService.create(passphrase: "tags-roundtrip")
+        for payload in content.records {
+            try vault.add(payload.type, level: payload.level, payload: payload.payload, tags: payload.tags)
+        }
+        let (exportDocument, _) = try KdbxVaultMapper.kdbxDocument(from: .init(
+            records: try vault.records(), versions: vault.allVersions(),
+            folders: vault.folders(), includedIDs: Set(try vault.records().map(\.id))))
+        XCTAssertEqual(exportDocument.root.allEntries().first { $0.name == "Tagged" }?.tags,
+                       "work,personal,dev web,urgent")
     }
 
     func testCustomFieldsAndAutoTypeAndIconsAreCounted() throws {
@@ -499,7 +617,7 @@ final class InteropTests: XCTestCase {
         let backVersioned = try XCTUnwrap(workGroup.entries.first { $0.name == "Versioned" })
         XCTAssertEqual(backVersioned.username, "v2-user")
         XCTAssertEqual(backVersioned.password, "v2-pass")
-        XCTAssertEqual(backVersioned.tags, "dev web")
+        XCTAssertEqual(backVersioned.tags, "dev,web", "KeePassXC-canonical ',' join (Entry::tags)")
         XCTAssertEqual(backVersioned.historyCount, 1)
         XCTAssertEqual(backVersioned.history[0].username, "v1-user")
         XCTAssertEqual(backVersioned.history[0].password, "v1-pass")

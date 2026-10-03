@@ -392,8 +392,12 @@ public enum KdbxVaultMapper {
             let key = string.key
             if standardStringKeys.contains(key) { continue }
             if key.hasPrefix("KPEX_PASSKEY") { continue } // passkeyAttributes
-            if key == "TimeOtp-Secret-Base32" || key == "TimeOtp-Secret" || key == "TimeOtp-Secret-Hex" {
+            if key == "TimeOtp-Secret-Base32" || key == "TimeOtp-Secret" || key == "TimeOtp-Secret-Hex"
+                || key == "TimeOtp-Algorithm" || key == "TimeOtp-Length" || key == "TimeOtp-Period" {
                 continue // consumed into payload.totpSecret
+            }
+            if key == "otp" {
+                continue // consumed into payload.totpSecret (KeePassXC canonical attribute)
             }
             if string.value.hasPrefix("otpauth://") {
                 // The first otpauth attribute feeds totpSecret; extras are drops.
@@ -457,28 +461,194 @@ public enum KdbxVaultMapper {
 
     // MARK: - Field helpers
 
-    /// Splits the space-separated kdbx tag string; empty/absent → nil.
+    /// Splits the kdbx tag string on the KeePass tag delimiters (`,` `;`
+    /// tab — KeePassXC `TagDelimiterRegex [,;\t]`, KeePass 2.x docs
+    /// "commas or semicolons"); a tag may itself contain spaces. Empty or
+    /// absent → nil.
     static func mappedTags(_ raw: String?) -> [String]? {
         guard let raw else { return nil }
-        let tags = raw.split(separator: " ").map(String.init).filter { !$0.isEmpty }
+        let tags = raw
+            .split(whereSeparator: { $0 == "," || $0 == ";" || $0 == "\t" })
+            .map { String($0.trimmingCharacters(in: .whitespaces)) }
+            .filter { !$0.isEmpty }
         return tags.isEmpty ? nil : tags
     }
 
-    /// Extracts the stored TOTP secret: KeePassXC `TimeOtp-Secret*`
-    /// attributes first, then any attribute whose value is an `otpauth://`
-    /// URI — the URI branch delegates to `OTPAuthURIParser.secret(in:)`
-    /// (06-02 D-07 hoist: one parser for CSV import, kdbx import, and live
-    /// code generation). Returns nil when absent.
+    /// Extracts the TOTP configuration as a full `otpauth://` URI — the same
+    /// storage semantics as the CSV import path, so generation parameters
+    /// (period/digits/algorithm) ride inside the URI instead of silently
+    /// falling back to RFC defaults. Source priority follows KeePassXC
+    /// `Totp.cpp`: the canonical `otp` attribute (all three of its
+    /// historical shapes — otpauth URI, KeeOtp `key=…&size=…&step=…`,
+    /// legacy `step;digits`), then the KeePass2 `TimeOtp-*` field family.
+    /// A `TimeOtp-Secret-Hex`/raw seed is hex-decoded and re-encoded as
+    /// Base32 — a KeePassOTP hex seed must never silently decode as wrong
+    /// Base32 bytes. Returns nil when absent.
     static func totpSecret(in entry: KdbxEntry) -> String? {
-        for key in ["TimeOtp-Secret-Base32", "TimeOtp-Secret", "TimeOtp-Secret-Hex"] {
-            if let value = entry.value(key), !value.isEmpty { return value }
+        // 1. Canonical KeePassXC `otp` attribute.
+        if let otp = entry.value("otp"), !otp.isEmpty {
+            if let uri = otpAuthURIFromAttribute(otp, entry: entry) {
+                return uri
+            }
+            // URI-shaped but strict parse failed (e.g. digits outside the
+            // engine's generation domain — KeePassXC's Steam preset writes
+            // digits=5): fall back to the bare-secret extraction so the seed
+            // survives; parity with the CSV path. Values in NO known shape
+            // (garbage) stay nil — they are not seeds.
+            if otp.lowercased().hasPrefix("otpauth://"),
+               let secret = OTPAuthURIParser.secret(in: otp), !secret.isEmpty {
+                return secret
+            }
         }
-        for string in entry.strings where string.value.hasPrefix("otpauth://") {
-            if let secret = OTPAuthURIParser.secret(in: string.value) {
+        // 2. KeePass2 `TimeOtp-*` family.
+        if let seed = timeOtpSeedBase32(in: entry) {
+            return synthesizedTOTPURI(
+                secret: seed,
+                algorithm: entry.value("TimeOtp-Algorithm"),
+                digits: entry.value("TimeOtp-Length"),
+                period: entry.value("TimeOtp-Period"),
+                title: entry.name, username: entry.username)
+        }
+        // 3. Any other attribute carrying an otpauth URI (scheme matched
+        //    case-insensitively — the parser is, so the gate must be).
+        //    Kept verbatim when it strictly parses; lenient bare-secret
+        //    fallback otherwise — never a silent drop.
+        for string in entry.strings
+        where string.value.lowercased().hasPrefix("otpauth://") {
+            if OTPAuthURIParser.parse(string.value) != nil {
+                return string.value
+            }
+            if let secret = OTPAuthURIParser.secret(in: string.value), !secret.isEmpty {
                 return secret
             }
         }
         return nil
+    }
+
+    /// Interprets one `otp` attribute value in any KeePassXC-documented
+    /// shape and returns the equivalent otpauth URI (nil when the value is
+    /// an unparseable seed without a companion seed field).
+    private static func otpAuthURIFromAttribute(
+        _ value: String, entry: KdbxEntry
+    ) -> String? {
+        if value.lowercased().hasPrefix("otpauth://") {
+            return OTPAuthURIParser.parse(value) != nil ? value : nil
+        }
+        if value.lowercased().hasPrefix("key=") {
+            // KeeOtp plugin shape: key=<seed>&size=<digits>&step=<period>
+            // [&otpHashMode=<SHA256|SHA512>]. Folded last-wins: the value is
+            // hostile input, and Dictionary(uniqueKeysWithValues:) would
+            // TRAP on a duplicate key.
+            var query: [String: String] = [:]
+            for item in value.split(separator: "&") {
+                let parts = item.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+                query[String(parts[0])] = parts.count > 1 ? String(parts[1]) : ""
+            }
+            guard let seed = query["key"], !seed.isEmpty else { return nil }
+            return synthesizedTOTPURI(
+                secret: seed,
+                algorithm: query["otpHashMode"],
+                digits: query["size"],
+                period: query["step"],
+                title: entry.name, username: entry.username)
+        }
+        if value.contains(";") {
+            // Legacy shape: `<period>;<digits>` (or `<period>;S` for the
+            // Steam encoder) with the seed in a companion attribute.
+            if let seed = timeOtpSeedBase32(in: entry) {
+                let vars = value.split(separator: ";")
+                let steam = vars.count > 1 && vars[1] == "S"
+                return synthesizedTOTPURI(
+                    secret: seed,
+                    algorithm: nil,
+                    digits: steam ? "5" : (vars.count > 1 ? String(vars[1]) : nil),
+                    period: vars.isEmpty ? nil : String(vars[0]),
+                    title: entry.name, username: entry.username)
+            }
+        }
+        return nil
+    }
+
+    /// The Base32 seed from the `TimeOtp-*` family, normalizing the hex and
+    /// raw variants (KeePassOTP plugin layout) so downstream Base32 decoding
+    /// cannot fail or fabricate bytes. `-Hex` is hex-first by contract; the
+    /// ambiguous raw variant tries Base32, then hex (the alphabets overlap
+    /// on `A-F2-7`).
+    private static func timeOtpSeedBase32(in entry: KdbxEntry) -> String? {
+        if let base32 = entry.value("TimeOtp-Secret-Base32"), !base32.isEmpty {
+            return base32
+        }
+        if let hex = entry.value("TimeOtp-Secret-Hex"), !hex.isEmpty,
+           let bytes = hexDecoded(hex) {
+            return Base32.encode(bytes)
+        }
+        if let raw = entry.value("TimeOtp-Secret"), !raw.isEmpty {
+            if let bytes = try? Base32.decode(raw) {
+                return Base32.encode(bytes)
+            }
+            if let bytes = hexDecoded(raw) {
+                return Base32.encode(bytes)
+            }
+        }
+        return nil
+    }
+
+    /// Decodes an even-length hex string; nil on odd length or non-hex chars.
+    private static func hexDecoded(_ raw: String) -> [UInt8]? {
+        guard raw.count % 2 == 0, !raw.isEmpty else { return nil }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(raw.count / 2)
+        var index = raw.startIndex
+        while index < raw.endIndex {
+            let next = raw.index(index, offsetBy: 2)
+            guard let byte = UInt8(raw[index..<next], radix: 16) else { return nil }
+            bytes.append(byte)
+            index = next
+        }
+        return bytes
+    }
+
+    /// Synthesizes a canonical otpauth URI in the exact shape KeePassXC
+    /// `writeSettings` emits (OTPURL format): label `title:username`,
+    /// explicit `period`/`digits`, `issuer` = title, `algorithm` only when
+    /// non-default. Missing/invalid parameters fall back to the RFC defaults
+    /// KeePassXC itself binds (digits 1–10, period 1–86400).
+    ///
+    /// Domain note (third-pass review): the engine's generation domain is
+    /// digits {6, 8} — a source file declaring other digit counts (e.g.
+    /// KeePassXC's 5-digit Steam preset) synthesizes a URI the engine's own
+    /// strict parser rejects, landing the record in the honest
+    /// "TOTP unavailable" state. That is deliberate: fabricating 6/8 would
+    /// change the code; verbatim keeps the seed round-trippable for
+    /// KeePassXC.
+    static func synthesizedTOTPURI(
+        secret: String,
+        algorithm: String?,
+        digits: String?,
+        period: String?,
+        title: String?,
+        username: String?
+    ) -> String {
+        let issuer = (title?.isEmpty == false) ? title! : "KeePassXC"
+        let user = (username?.isEmpty == false) ? username! : "none"
+        let digitCount = digits.flatMap { Int($0) }.flatMap { (1...10).contains($0) ? $0 : nil } ?? 6
+        let periodCount = period.flatMap { Int($0) }.flatMap { (1...86_400).contains($0) ? $0 : nil } ?? 30
+        let normalizedAlgorithm = algorithm.map { $0.uppercased() }
+
+        var components = URLComponents()
+        components.scheme = "otpauth"
+        components.host = "totp"
+        components.path = "/" + "\(issuer):\(user)"
+        components.queryItems = [
+            URLQueryItem(name: "secret", value: secret),
+            URLQueryItem(name: "period", value: String(periodCount)),
+            URLQueryItem(name: "digits", value: String(digitCount)),
+            URLQueryItem(name: "issuer", value: issuer),
+        ]
+        if normalizedAlgorithm == "SHA256" || normalizedAlgorithm == "SHA512" {
+            components.queryItems?.append(URLQueryItem(name: "algorithm", value: normalizedAlgorithm))
+        }
+        return components.string ?? ""
     }
 
     /// Reads the passkey credential for the payload (06-CONTEXT D-09
@@ -640,7 +810,17 @@ public enum KdbxVaultMapper {
         var entry = KdbxEntry()
         writeStandardFields(record.payload, into: &entry)
         if let tags = record.tags, !tags.isEmpty {
-            entry.tags = tags.joined(separator: " ")
+            entry.tags = tags.joined(separator: ",")
+        }
+        if let totp = record.payload.totpSecret {
+            // TOTP write-back (261003-mk7 second pass: export previously
+            // dropped the generator secret entirely). Canonical KeePassXC
+            // `otp` attribute — read natively by KeePassXC/Strongbox and by
+            // our own importer; parameters ride inside the URI. Protected:
+            // a TOTP seed is a secret.
+            entry.setValue(
+                "otp", exportedOTPValue(totp, title: record.payload.title, username: record.payload.username),
+                protected: true)
         }
         if let passkey = record.payload.passkey {
             // Passkey write-back (06-CONTEXT D-09 close-out): the byte-level
@@ -661,7 +841,12 @@ public enum KdbxVaultMapper {
             var historic = KdbxEntry()
             writeStandardFields(version.payload, into: &historic)
             if let tags = version.tags, !tags.isEmpty {
-                historic.tags = tags.joined(separator: " ")
+                historic.tags = tags.joined(separator: ",")
+            }
+            if let totp = version.payload.totpSecret {
+                historic.setValue(
+                    "otp", exportedOTPValue(totp, title: version.payload.title, username: version.payload.username),
+                    protected: true)
             }
             if let passkey = version.payload.passkey {
                 // History versions mirror the current-version treatment:
@@ -685,6 +870,19 @@ public enum KdbxVaultMapper {
     }
 
     // MARK: - Shared helpers
+
+    /// The canonical `otp` attribute value for export (KeePassXC `Totp.cpp
+    /// writeSettings`, OTPURL shape). A stored otpauth URI passes through
+    /// verbatim — CSV-imported parameters survive the round trip; a bare
+    /// seed is wrapped in a synthesized URI with engine defaults.
+    static func exportedOTPValue(_ totpSecret: String, title: String, username: String) -> String {
+        if totpSecret.lowercased().hasPrefix("otpauth://") {
+            return totpSecret
+        }
+        return synthesizedTOTPURI(
+            secret: totpSecret, algorithm: nil, digits: nil, period: nil,
+            title: title, username: username)
+    }
 
     /// Monotonic version-timeline helper: preferred dates when they keep the
     /// chain increasing, otherwise the fallback base bumped by whole seconds.

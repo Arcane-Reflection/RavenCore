@@ -88,6 +88,19 @@ final class KdbxCompositeKeyTests: XCTestCase {
         }
     }
 
+    /// Hostile ceiling unification (261003-mk7 second pass): 2 GiB sits UNDER
+    /// the old 4 GiB kdbx clamp but OVER the shared `hostileMaxMemoryKiB` —
+    /// rejected typed at the header boundary instead of a jetsam-scale
+    /// pre-auth allocation.
+    func testHostileArgon2MemoryRejectedAtSharedCeiling() throws {
+        let components = try KdbxKeyComponents(password: "password", keyFileKey: nil)
+        var kdf = argon2idKDF(iterations: 1)
+        kdf["M"] = .uint64(UInt64(2) * 1024 * 1024 * 1024) // 2 GiB in bytes
+        XCTAssertThrowsError(try components.transformedKey(kdfParameters: kdf)) { error in
+            XCTAssertEqual(error as? KdbxError, .unsupportedKdfParameters)
+        }
+    }
+
     /// FW-01: a hostile KDBX 4 header declaring an absurd AES-KDF round count
     /// must fail FAST with a typed error — the KDF transform runs before the
     /// header HMAC check, so nothing authenticates the file first. The wall-

@@ -13,6 +13,10 @@ public enum MirrorError: Error, Equatable {
     case versionUnsupported(UInt8)
     /// The header's KDF id is not Argon2id (0x01).
     case kdfUnsupported(UInt8)
+    /// The header's self-described KDF parameters exceed the hostile-input
+    /// ceilings (`KeyDerivation.hostileMax*`) — rejected at the header
+    /// boundary instead of triggering a jetsam-scale pre-auth allocation.
+    case kdfParametersUnsupported
     /// GCM authentication failed — wrong passphrase or tampered bytes.
     /// Unified with the wrong-passphrase case on purpose (D-06): the decode
     /// never reveals which half failed.
@@ -219,6 +223,16 @@ public enum MirrorContainer {
         // padded container is malformed, never silently accepted.
         guard info.payloadLength == UInt64(ciphertext.count) else {
             throw MirrorError.malformed
+        }
+        // Hostile-header ceilings before any derivation (261003-mk7 second
+        // pass): the header is untrusted until GCM authenticates, so a
+        // crafted memory/parallelism claim must fail typed here — not burn a
+        // jetsam-scale Argon2 allocation per passphrase attempt, and not let
+        // a foreign `KeyDerivationError` escape `decrypt` (out-of-domain
+        // values in either direction used to).
+        guard info.memoryKiB >= 8, info.memoryKiB <= KeyDerivation.hostileMaxMemoryKiB,
+              info.parallelism >= 1, info.parallelism <= KeyDerivation.hostileMaxParallelism else {
+            throw MirrorError.kdfParametersUnsupported
         }
         return ParsedHeader(info: info, nonce: nonce, ciphertext: ciphertext)
     }
