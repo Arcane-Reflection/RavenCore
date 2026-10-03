@@ -60,7 +60,17 @@ public struct AppendOnlyLog: Sendable, Equatable, Codable {
     /// Appends `payload` and returns the new entry.
     @discardableResult
     public mutating func append(payload: Data, at date: Date = Date()) -> VaultLogEntry {
+        append(payload: payload, at: date, id: UUID())
+    }
+
+    /// Appends `payload` under an explicit record identifier and returns the
+    /// new entry. Same-id entries are legitimate chain entries — the hash
+    /// input does not include the id — and drive the supersede-on-edit
+    /// semantics (`VaultService.update`, 04-CONTEXT D-03).
+    @discardableResult
+    mutating func append(payload: Data, at date: Date = Date(), id: UUID) -> VaultLogEntry {
         let entry = VaultLogEntry(
+            id: id,
             createdAt: date,
             payload: payload,
             previousHash: headHash,
@@ -71,13 +81,25 @@ public struct AppendOnlyLog: Sendable, Equatable, Codable {
         return entry
     }
 
-    /// Soft-delete: marks the entry archived. Reversible via compaction only.
+    /// Soft-delete: marks EVERY entry carrying `id` archived (a record's
+    /// supersede history must not leave the newest version active — 04-CONTEXT
+    /// D-03). Reversible via `unarchive(id:)`. Returns `true` when at least
+    /// one entry transitioned (idempotent on repeat calls).
     @discardableResult
     public mutating func archive(id: UUID, at date: Date = Date()) -> Bool {
-        guard let index = entries.firstIndex(where: { $0.id == id }), !entries[index].isArchived else {
-            return false
-        }
-        entries[index].archivedAt = date
+        let indices = entries.indices.filter { entries[$0].id == id && !entries[$0].isArchived }
+        guard !indices.isEmpty else { return false }
+        for index in indices { entries[index].archivedAt = date }
+        return true
+    }
+
+    /// Reverses a soft-delete: clears `archivedAt` on every entry carrying
+    /// `id`. Returns `true` when at least one entry transitioned.
+    @discardableResult
+    mutating func unarchive(id: UUID) -> Bool {
+        let indices = entries.indices.filter { entries[$0].id == id && entries[$0].isArchived }
+        guard !indices.isEmpty else { return false }
+        for index in indices { entries[index].archivedAt = nil }
         return true
     }
 

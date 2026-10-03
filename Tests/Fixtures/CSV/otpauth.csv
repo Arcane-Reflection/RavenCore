@@ -1,0 +1,4 @@
+name,url,username,password,note,totp
+URI Site,https://uri.example,ivy,pw-ivy-1,note,otpauth://totp/ivy?secret=KRMVATZTJF6UC55V&period=30&digits=6&issuer=Example
+Bare Site,https://bare.example,jack,pw-jack-2,note,JBSWY3DPEHPK3PXPUZRQ
+Bad Site,https://bad.example,kate,pw-kate-3,note,otpauth://totp/kate?period=30

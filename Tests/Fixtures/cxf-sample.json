@@ -1,0 +1,153 @@
+{
+  "exporterDisplayName" : "Apple Passwords",
+  "accounts" : [
+    {
+      "id" : "Ag==",
+      "username" : "otter@example.com",
+      "collections" : [
+
+      ],
+      "email" : "otter@example.com",
+      "items" : [
+        {
+          "modifiedAt" : 1001,
+          "credentials" : [
+            {
+              "type" : "basic-auth",
+              "username" : {
+                "fieldType" : "email",
+                "value" : "otter@example.com"
+              },
+              "password" : {
+                "fieldType" : "concealed-string",
+                "value" : "hunter2"
+              }
+            },
+            {
+              "algorithm" : "sha256",
+              "period" : 60,
+              "issuer" : "Example",
+              "type" : "totp",
+              "secret" : "AAECAwQFBgcICQoLDA0ODxAREhM=",
+              "username" : "otter@example.com",
+              "digits" : 8
+            }
+          ],
+          "scope" : {
+            "urls" : ["https:\/\/example.com\/login"],
+            "androidApps" : [
+
+            ]
+          },
+          "creationAt" : 1000,
+          "title" : "Example",
+          "id" : "AQ=="
+        },
+        {
+          "modifiedAt" : 1002,
+          "credentials" : [
+            {
+              "type" : "passkey",
+              "rpId" : "passkey.example.com",
+              "userDisplayName" : "Otter",
+              "username" : "otter@example.com",
+              "key" : "BPhTLYMVe1CKOuBtj3g5x6OwxYKSBhLQnLc5CK++JFG9OG0+qoug0rwhH7Jk1QsHqcne3OB0VZWKk5AYXDp\/1NsudZC0UvgifDjPxJsLp2n5fafeDIa76ZXiL9FFjfb2fw==",
+              "userHandle" : "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=",
+              "credentialId" : "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+            }
+          ],
+          "scope" : {
+            "urls" : ["https:\/\/passkey.example.com"],
+            "androidApps" : [
+
+            ]
+          },
+          "creationAt" : 1003,
+          "title" : "Passkey Example",
+          "id" : "Aw=="
+        },
+        {
+          "modifiedAt" : 1004,
+          "credentials" : [
+            {
+              "type" : "note",
+              "content" : {
+                "fieldType" : "string",
+                "value" : "a secret note"
+              }
+            }
+          ],
+          "scope" : {
+            "urls" : [
+
+            ],
+            "androidApps" : [
+
+            ]
+          },
+          "creationAt" : 1005,
+          "title" : "Secure Note",
+          "id" : "BA=="
+        },
+        {
+          "modifiedAt" : 1006,
+          "credentials" : [
+            {
+              "number" : {
+                "value" : "4111111111111111",
+                "fieldType" : "number"
+              },
+              "type" : "credit-card",
+              "fullName" : {
+                "value" : "Otter",
+                "fieldType" : "string"
+              }
+            }
+          ],
+          "scope" : {
+            "urls" : [
+
+            ],
+            "androidApps" : [
+
+            ]
+          },
+          "creationAt" : 1007,
+          "title" : "Bank Card",
+          "id" : "BQ=="
+        },
+        {
+          "modifiedAt" : 1008,
+          "credentials" : [
+            {
+              "type" : "passkey",
+              "rpId" : "broken.example.com",
+              "userDisplayName" : "Otter",
+              "username" : "otter@example.com",
+              "key" : "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+              "userHandle" : "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=",
+              "credentialId" : "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+            }
+          ],
+          "scope" : {
+            "urls" : [
+
+            ],
+            "androidApps" : [
+
+            ]
+          },
+          "creationAt" : 1009,
+          "title" : "Broken Passkey",
+          "id" : "Bg=="
+        }
+      ]
+    }
+  ],
+  "exporterRpId" : "com.apple.passwords",
+  "version" : {
+    "minor" : 0,
+    "major" : 1
+  },
+  "timestamp" : 1000
+}

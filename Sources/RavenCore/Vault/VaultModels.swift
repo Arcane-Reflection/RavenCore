@@ -16,6 +16,14 @@ public enum RecordType: String, Codable, Sendable, CaseIterable {
     case card
     case secureNote
     case seedPhrase
+    /// Emergency Card (07-CONTEXT D-16/D-17): a user-editable free-form
+    /// record (emergency contacts, medical info, exit instructions) that is
+    /// HARD-excluded from every export/search/AutoFill surface via the app
+    /// layer's single `EmergencyCardPolicy.isEmergencyCard` predicate.
+    /// Additive enum case following the passkey precedent: the raw-value
+    /// Codable synthesizes fine and pre-card envelopes (no such raw value
+    /// ever written) decode unchanged — `formatVersion` is NOT bumped.
+    case emergencyCard
 }
 
 /// The decrypted content of a vault record.
@@ -32,6 +40,17 @@ public struct RecordPayload: Sendable, Equatable, Codable {
     public var totpSecret: String?
     /// Seed phrase words (cold-storage tier), if any.
     public var seedPhrase: [String]?
+    /// Account URL, if any (04-CONTEXT D-01 — the Phase 5 CSV/kdbx mapping
+    /// and Phase 6 AutoFill anchor).
+    public var url: String?
+    /// FIDO2/WebAuthn credential, if any (06-CONTEXT D-09). The Phase 2
+    /// `PasskeyCredential` (KPEX_PASSKEY_* attribute set pinned by the kxc
+    /// corpus) is reused verbatim. Additive optional extension following the
+    /// attachments precedent: synthesized decoding tolerates absence (a
+    /// pre-passkey envelope decodes with `passkey == nil` forever) and
+    /// encoding omits the key when nil, so the wire format stays stable and
+    /// `formatVersion` is unchanged.
+    public var passkey: PasskeyCredential?
 
     /// Creates a payload; omitted fields default to empty/nil.
     public init(
@@ -40,7 +59,9 @@ public struct RecordPayload: Sendable, Equatable, Codable {
         password: String = "",
         notes: String = "",
         totpSecret: String? = nil,
-        seedPhrase: [String]? = nil
+        seedPhrase: [String]? = nil,
+        url: String? = nil,
+        passkey: PasskeyCredential? = nil
     ) {
         self.title = title
         self.username = username
@@ -48,6 +69,57 @@ public struct RecordPayload: Sendable, Equatable, Codable {
         self.notes = notes
         self.totpSecret = totpSecret
         self.seedPhrase = seedPhrase
+        self.url = url
+        self.passkey = passkey
+    }
+}
+
+/// A folder in the vault's organizational tree (04-CONTEXT D-01/D-02).
+///
+/// Folder metadata lives on the document, not in the append-only log: it is
+/// organizational structure (like kdbx groups), not record history. The data
+/// model supports nesting via `parentID`; the v1 UI renders it flat. Folders
+/// travel with the vault file — they are vault data, never app-side state.
+public struct Folder: Sendable, Equatable, Codable, Identifiable {
+    /// Folder identifier (referenced by `RecordEnvelope.folderID`).
+    public var id: UUID
+    /// Display name (unique among siblings).
+    public var name: String
+    /// Parent folder, or nil for a root folder. Nesting-capable for the
+    /// Phase 5 kdbx group mapping; v1 UI renders flat.
+    public var parentID: UUID?
+
+    public init(id: UUID = UUID(), name: String, parentID: UUID? = nil) {
+        self.id = id
+        self.name = name
+        self.parentID = parentID
+    }
+}
+
+/// A file attachment carried inside a record envelope (05-CONTEXT D-04).
+///
+/// Bytes are inline: attachments travel with the vault file itself, never as
+/// app-side sidecars ("vault data travels with the file" hard constraint).
+/// Versioned content — the attachment list rides the envelope, so history
+/// versions carry the attachments they had at that version (kdbx parity).
+/// One hard per-attachment cap bounds memory: oversized input fails loudly
+/// at the interop boundary, never truncates (T-05-03).
+public struct RecordAttachment: Sendable, Equatable, Codable {
+    /// Attachment identity (the share/export paths address attachments by id).
+    public var id: UUID
+    /// File name as displayed.
+    public var name: String
+    /// MIME-style content type, when known (kdbx sources carry none).
+    public var contentType: String?
+    /// Raw attachment bytes.
+    public var data: Data
+
+    /// Creates an attachment.
+    public init(id: UUID, name: String, contentType: String?, data: Data) {
+        self.id = id
+        self.name = name
+        self.contentType = contentType
+        self.data = data
     }
 }
 
@@ -56,9 +128,63 @@ struct RecordEnvelope: Codable, Sendable, Equatable {
     var type: RecordType
     var level: SecurityLevel
     var record: RecordPayload
+    /// Free-form organizational tags (04-CONTEXT D-02 — no separate tag
+    /// entity in v1; the tag list is aggregated from records).
+    var tags: [String]? = nil
+    /// Containing folder, if any (references `VaultDocument.folders`).
+    var folderID: UUID? = nil
+    /// File attachments (05-CONTEXT D-04). Additive optional extension:
+    /// absent (nil) in envelopes written before the extension; omitted when
+    /// nil so the v2 wire format stays stable for pre-extension readers.
+    var attachments: [RecordAttachment]? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case type, level, record, tags, folderID, attachments
+    }
+
+    /// Explicit Codable so pre-extension envelopes (no `attachments` key)
+    /// decode forever: absent decodes to nil (D-04 fixture-first discipline).
+    init(
+        type: RecordType,
+        level: SecurityLevel,
+        record: RecordPayload,
+        tags: [String]? = nil,
+        folderID: UUID? = nil,
+        attachments: [RecordAttachment]? = nil
+    ) {
+        self.type = type
+        self.level = level
+        self.record = record
+        self.tags = tags
+        self.folderID = folderID
+        self.attachments = attachments
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        type = try c.decode(RecordType.self, forKey: .type)
+        level = try c.decode(SecurityLevel.self, forKey: .level)
+        record = try c.decode(RecordPayload.self, forKey: .record)
+        tags = try c.decodeIfPresent([String].self, forKey: .tags)
+        folderID = try c.decodeIfPresent(UUID.self, forKey: .folderID)
+        attachments = try c.decodeIfPresent([RecordAttachment].self, forKey: .attachments)
+    }
+
+    /// Encodes every field; absent optionals are omitted, keeping the JSON
+    /// wire format stable for older readers (frozen format).
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(type, forKey: .type)
+        try c.encode(level, forKey: .level)
+        try c.encode(record, forKey: .record)
+        try c.encodeIfPresent(tags, forKey: .tags)
+        try c.encodeIfPresent(folderID, forKey: .folderID)
+        try c.encodeIfPresent(attachments, forKey: .attachments)
+    }
 }
 
-/// A decrypted record surfaced to the app layer.
+/// A decrypted record surfaced to the app layer (deduplicated: one instance
+/// per record id — the newest version wins, 04-CONTEXT D-03).
 public struct DecryptedRecord: Sendable, Equatable, Identifiable {
     /// Record identifier.
     public let id: UUID
@@ -70,8 +196,68 @@ public struct DecryptedRecord: Sendable, Equatable, Identifiable {
     public let level: SecurityLevel
     /// Decrypted content.
     public let payload: RecordPayload
+    /// Free-form organizational tags, if any (04-CONTEXT D-02).
+    public let tags: [String]?
+    /// Containing folder, if any (references `VaultDocument.folders`).
+    public let folderID: UUID?
+    /// File attachments of the newest version, if any (05-CONTEXT D-04).
+    /// Absent (nil) for records whose versions predate the extension.
+    public let attachments: [RecordAttachment]?
     /// Soft-delete state (reversible until compaction).
     public let isArchived: Bool
+
+    public init(
+        id: UUID,
+        createdAt: Date,
+        type: RecordType,
+        level: SecurityLevel,
+        payload: RecordPayload,
+        tags: [String]? = nil,
+        folderID: UUID? = nil,
+        attachments: [RecordAttachment]? = nil,
+        isArchived: Bool
+    ) {
+        self.id = id
+        self.createdAt = createdAt
+        self.type = type
+        self.level = level
+        self.payload = payload
+        self.tags = tags
+        self.folderID = folderID
+        self.attachments = attachments
+        self.isArchived = isArchived
+    }
+}
+
+/// One historical version of a record — the read-only full-history view
+/// behind `VaultService.allVersions()` (05-01: the kdbx export replay needs
+/// every version, not just the deduplicated newest).
+public struct RecordVersion: Sendable, Equatable {
+    /// Decrypted content of this version.
+    public let payload: RecordPayload
+    /// Free-form organizational tags, if any.
+    public let tags: [String]?
+    /// Containing folder, if any.
+    public let folderID: UUID?
+    /// File attachments of this version, if any.
+    public let attachments: [RecordAttachment]?
+    /// Version timestamp (the log entry's `createdAt`).
+    public let at: Date
+
+    /// Creates a version view; used by `VaultService.allVersions()`.
+    public init(
+        payload: RecordPayload,
+        tags: [String]?,
+        folderID: UUID?,
+        attachments: [RecordAttachment]?,
+        at: Date
+    ) {
+        self.payload = payload
+        self.tags = tags
+        self.folderID = folderID
+        self.attachments = attachments
+        self.at = at
+    }
 }
 
 /// KDF algorithm identifiers stored in `VaultHeader.kdfAlgorithm`.
@@ -184,4 +370,9 @@ public struct VaultDocument: Sendable, Equatable, Codable {
     public var header: VaultHeader
     /// Tamper-evident record history.
     public var log: AppendOnlyLog
+    /// Organizational folder tree (04-CONTEXT D-01). Document-level metadata
+    /// outside the record chain — like the header. Absent (nil) in vaults
+    /// written before the extension; omitted when empty so the v2 wire format
+    /// stays stable for pre-extension readers.
+    public var folders: [Folder]? = nil
 }

@@ -9,12 +9,13 @@ database password: `correct-horse-battery`. Regenerate with
 | kxc-default.kdbx | KeePassXC | Argon2id defaults, AES-CBC, gzip, url/notes fields | password |
 | kxc-history.kdbx | KeePassXC | entry history (2 revisions, notes+password rotations) | password |
 | kxc-recyclebin.kdbx | KeePassXC | recycle bin group + removed entry | password |
-| kxc-attachment.kdbx | KeePassXC | 64 KiB binary attachment | password |
+| kxc-attachment.kdbx | KeePassXC | 64 KiB binary attachment (KDBX 3.1 — pool opaque in Meta/Binaries, D-06) | password |
 | kxc-keyfile.kdbx (+ .keyx) | KeePassXC | password + key file (XML v2.0) combination | password + keyx |
 | rv-argon2d.kdbx | RavenCore | Argon2d KDF (verified by keepassxc-cli) | password |
 | rv-aeskdf.kdbx | RavenCore | AES-KDF 600k (verified by keepassxc-cli) | password |
 | rv-chacha20.kdbx | RavenCore | ChaCha20 outer cipher (verified by keepassxc-cli) | password |
 | rv-nocompress.kdbx | RavenCore | compression disabled (verified by keepassxc-cli) | password |
+| rv-attachment4.kdbx | RavenCore | 64 KiB binary attachment in the 4.0 inner-header pool (kdbx→native attachment import byte-fidelity, InteropTests) | password |
 | kxc-passkey.kdbx | KeePassXC 2.7.12 (one-time artifact) | passkey entry: 7 KPEX_PASSKEY_* attrs, secrets protected (regression lock, CorpusGateTests) | password |
 | rv-passkey.kdbx | RavenCore | KdbxPasskey.write layout, per-attribute keepassxc-cli verification | password |
 

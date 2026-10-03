@@ -38,7 +38,7 @@ public enum Gzip {
         _ = try reader.readUInt8() // OS
         if flags & 0x04 != 0 { // FEXTRA
             let extraLen = Int(try reader.readUInt16())
-            guard extraLen >= 0, extraLen <= reader.remaining else { throw KdbxError.malformedData }
+            guard extraLen <= reader.remaining else { throw KdbxError.malformedData }
             _ = try reader.readBytes(extraLen)
         }
         if flags & 0x08 != 0 { // FNAME: zero-terminated

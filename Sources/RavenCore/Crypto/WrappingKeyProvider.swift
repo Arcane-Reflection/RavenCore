@@ -8,14 +8,14 @@ import Foundation
 /// 2. a passphrase-derived KEK (portable path) — enables migration to a new device
 ///
 /// Either wrap alone opens the vault.
-public protocol WrappingKeyProvider {
+public protocol WrappingKeyProvider: Sendable {
     func wrap(_ key: SymmetricKey) throws -> SealedPayload
     func unwrap(_ payload: SealedPayload) throws -> SymmetricKey
 }
 
 /// Wraps the data key under a passphrase-derived KEK (PBKDF2-HMAC-SHA256).
 /// This is the portable half of the dual-wrap pair.
-public struct PassphraseWrapProvider: WrappingKeyProvider {
+public struct PassphraseWrapProvider: WrappingKeyProvider, Sendable {
     private let kek: SymmetricKey
 
     /// Derives the KEK from `passphrase` (PBKDF2-HMAC-SHA256, 600k default).
@@ -42,7 +42,7 @@ public struct PassphraseWrapProvider: WrappingKeyProvider {
 
 /// Wraps the data key under an in-memory symmetric key.
 /// Used by tests and as the internal plumbing for the future Secure Enclave provider.
-public struct RawKeyWrapProvider: WrappingKeyProvider {
+public struct RawKeyWrapProvider: WrappingKeyProvider, Sendable {
     private let wrappingKey: SymmetricKey
 
     /// Creates a provider over an in-memory key (test stand-in for the

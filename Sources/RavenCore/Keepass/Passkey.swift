@@ -47,7 +47,12 @@ public enum KdbxPasskeyError: Error, Equatable {
 /// The WebAuthn credential material carried by a passkey entry. All strings
 /// are stored and compared verbatim — the engine never re-encodes
 /// interoperability payloads (KeePassXC does not re-validate them at rest).
-public struct PasskeyCredential: Sendable, Equatable {
+///
+/// `Codable` (06-CONTEXT D-09) so the same credential rides the native
+/// `RecordPayload.passkey` field: the JSON keys are the property names, and
+/// the base64url/PEM strings are stored verbatim on the wire exactly as the
+/// `KPEX_PASSKEY_*` attributes store them.
+public struct PasskeyCredential: Sendable, Equatable, Codable {
     /// `KPEX_PASSKEY_USERNAME` (plain string).
     public var username: String
     /// `KPEX_PASSKEY_RELYING_PARTY` — RP ID (registrable domain, no scheme/path).
@@ -238,6 +243,21 @@ public enum KdbxPasskey {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    /// Decodes an unpadded base64url string back to bytes (the inverse of
+    /// `base64URLEncode`). Returns nil for malformed input — callers treat a
+    /// stored credential ID or user handle that no longer decodes as an
+    /// honest absence, never as empty bytes.
+    public static func base64URLDecode(_ string: String) -> Data? {
+        var standard = string
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = standard.count % 4
+        if remainder > 0 {
+            standard.append(String(repeating: "=", count: 4 - remainder))
+        }
+        return Data(base64Encoded: standard)
     }
 
     // MARK: - Private

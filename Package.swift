@@ -12,7 +12,8 @@ let package = Package(
     ],
     targets: [
         // Vendored Argon2 reference C (pin: Sources/CArgon2/UPSTREAM.md).
-        // ref.c only — opt.c/thread.c deliberately excluded (arm64 + hermeticity).
+        // ref.c + thread.c compiled; opt.c (+ blamka-round-opt.h) deliberately
+        // excluded — SSE2 breaks arm64 (arm64 + hermeticity, per UPSTREAM.md).
         .target(
             name: "CArgon2",
             path: "Sources/CArgon2",
@@ -31,14 +32,17 @@ let package = Package(
                 .headerSearchPath("src/blake2"),
             ]
         ),
-        // Vendored BIP39 English wordlist (pin: Seed/Bip39.swift doc comment).
-        // .copy keeps the resource byte-verbatim — the load-time validator
-        // requires exactly 2048 LF lines and would tripwire on any rewrite.
+        // Vendored wordlists (pins: Seed/Bip39.swift + Generator/PasswordGenerator.swift
+        // + HealthIndex/CommonPasswordList.swift doc comments). .copy keeps each
+        // resource byte-verbatim — the load-time validators require exact line
+        // counts (2048 / 7776 / 10000 LF lines) and would tripwire on any rewrite.
         .target(
             name: "RavenCore",
             dependencies: ["CArgon2"],
             resources: [
-                .copy("Seed/Resources/bip39-english.txt")
+                .copy("Seed/Resources/bip39-english.txt"),
+                .copy("Generator/Resources/eff-large-wordlist.txt"),
+                .copy("HealthIndex/Resources/common-passwords-top10k.txt"),
             ]
         ),
         .testTarget(name: "RavenCoreTests", dependencies: ["RavenCore"])

@@ -109,7 +109,7 @@ public enum KdbxReader {
         while true {
             let id = try reader.readUInt8()
             let length = Int(try reader.readUInt16())
-            guard length >= 0, length <= reader.remaining else { throw KdbxError.corruptFile }
+            guard length <= reader.remaining else { throw KdbxError.corruptFile }
             let value = try reader.readBytes(length)
             switch id {
             case 0: // end of header

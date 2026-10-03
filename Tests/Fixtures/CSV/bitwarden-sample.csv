@@ -1,0 +1,4 @@
+folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp
+,,login,GitHub,"Dev account, primary",,0,https://github.com,alice,pw-github-1,otpauth://totp/GitHub:alice?secret=JBSWY3DPEHPK3PXP&issuer=GitHub
+,,login,Bank,"Notes with ""quoted"" words",,0,https://bank.example,bob,pw-bank-2,
+,,login,Example Org,plain notes,,0,https://example.org,carol,pw-carol-3,JBSWY3DPEHPK3PXPUZRQ

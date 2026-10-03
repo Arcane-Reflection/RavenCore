@@ -11,7 +11,6 @@ import Foundation
 public struct ChaCha20 {
     private var state: [UInt32] // 16 words
     private var counter: UInt32
-    private let nonce: [UInt8] // 12 bytes
     private var keystream: [UInt8] = []
     private var keystreamOffset = 0
 
@@ -33,7 +32,6 @@ public struct ChaCha20 {
             Self.readUInt32LE(nonce, 8),
         ]
         counter = initialCounter
-        self.nonce = Array(nonce)
     }
 
     /// Encrypts/decrypts `input` (XOR with keystream), advancing the running

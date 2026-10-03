@@ -1,0 +1,42 @@
+{
+  "format" : "ravenvault-shamir-passphrase-payload",
+  "vectors" : [
+    {
+      "name" : "3-of-5 passphrase 'correct horse' (primary recovery profile)",
+      "paper" : [
+        "041GA-08E0Q-9PVEX-ZNE7J-PZRW4-D7A5G-HA2SD-KC",
+        "041GA-0GE35-TASA6-Q1MME-MQPB1-Z6F5Y-DP8Z3-G0",
+        "041GA-0RE27-2AWR8-TRF2B-A0DZ8-FR26Q-MVPGY-GE",
+        "041GA-10E6Q-WCZ4N-D6VVX-BYR2D-0P98P-Y87YB-W0",
+        "041GA-18E7N-4CTPV-0Z0DR-N93P4-G84BZ-75SHP-WE"
+      ],
+      "passphrase" : "correct horse",
+      "payload_hex" : "0d636f727265637420686f727365",
+      "share_value_hex" : [
+        "05d36dbbbfab8f2b7f1c234ea2c2",
+        "1974aca8d70d28ea5ecb0fccf2f9",
+        "11c4ae611ac3c4b501bf43f0235e",
+        "35f8cf92ad36f7d5fb02682c945b",
+        "3d48cd5b60f81b8aa476241045fc"
+      ],
+      "threshold" : 3,
+      "total" : 5
+    },
+    {
+      "name" : "2-of-2 single-character passphrase (minimum-length boundary)",
+      "paper" : [
+        "04104-08279-S2S2A-VRC",
+        "04104-0G2EX-P83S7-R0R"
+      ],
+      "passphrase" : "x",
+      "payload_hex" : "0178",
+      "share_value_hex" : [
+        "3a72",
+        "776c"
+      ],
+      "threshold" : 2,
+      "total" : 2
+    }
+  ],
+  "version" : 1
+}

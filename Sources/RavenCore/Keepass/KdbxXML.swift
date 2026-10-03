@@ -61,12 +61,10 @@ public enum KdbxXML {
             var built: Any?
             var opaqueNodes: [OpaqueNode] = []
             var isOpaque = false
-            weak var parent: Frame?
 
-            init(name: String, attributes: [String: String], parent: Frame?) {
+            init(name: String, attributes: [String: String]) {
                 self.name = name
                 self.attributes = attributes
-                self.parent = parent
             }
 
             func childText(_ name: String) -> String? {
@@ -92,7 +90,7 @@ public enum KdbxXML {
                 return
             }
             let parent = stack.last
-            let frame = Frame(name: name, attributes: attributeDict, parent: parent)
+            let frame = Frame(name: name, attributes: attributeDict)
             frame.isOpaque = (parent?.isOpaque ?? false) || !isKnown(name, parent: parent?.name)
             stack.append(frame)
             if rootFrame == nil { rootFrame = frame }
@@ -648,16 +646,16 @@ public enum KdbxXML {
 
         // MARK: Low-level emission
 
+        /// The element currently being opened whose `>` is not yet emitted —
+        /// attributes can still be added to it.
+        private var pending: (name: String, attrs: String)?
+
         private func writeAttributes(_ attributes: UnknownAttributes) {
             guard !attributes.isEmpty, pending != nil else { return }
             for attr in attributes {
                 pending?.attrs += " \(attr.name)=\"\(escape(attr.value, attribute: true))\""
             }
         }
-
-        /// The element currently being opened whose `>` is not yet emitted —
-        /// attributes can still be added to it.
-        private var pending: (name: String, attrs: String)?
 
         private func flushPending() {
             guard let tag = pending else { return }

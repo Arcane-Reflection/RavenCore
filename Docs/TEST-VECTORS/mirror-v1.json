@@ -1,0 +1,55 @@
+{
+  "format" : "ravenvault-mirror-container",
+  "version" : 1,
+  "notes" : "Frozen public vectors for the Secure Mirror container (Docs/MIRROR-FORMAT.md). The canonical vector pins the DETERMINISTIC prefix of the container — bytes 0..<37 (magic, version, KDF id, parameters, salt, payload length) — for the fixed inputs below. The tail (GCM nonce + ciphertext) is intentionally NOT pinned: the seal path always draws a fresh random nonce, which is a security property of the format, so no two valid exports of the same inputs are byte-identical. Tamper variants are expressed as byte-offset mutations applied to a fresh canonical export. Regeneration is GENERATE_VECTORS=1, one-time recovery only — these values are a published backup contract.",
+  "inputs" : {
+    "passphrase" : "mirror fixture passphrase",
+    "salt_hex" : "000102030405060708090a0b0c0d0e0f",
+    "kdbx_channel" : "fake kdbx channel bytes",
+    "ravenvault_channel" : "fake ravenvault channel bytes, longer",
+    "kdf" : { "id" : 1, "memoryKiB" : 65536, "timeCost" : 3, "parallelism" : 2 }
+  },
+  "vectors" : [
+    {
+      "name" : "canonical both-channel container (deterministic prefix, bytes 0..<37)",
+      "container_prefix_hex" : "52564d49000101000100000302000102030405060708090a0b0c0d0e0f000000000000005e",
+      "expected_payload_length" : 94,
+      "expected_channels" : ["kdbx", "ravenvault"]
+    },
+    {
+      "name" : "tamper: flipped magic byte 0",
+      "mutation" : "xor container[0] with 0xff",
+      "expect_error" : "magicMismatch"
+    },
+    {
+      "name" : "tamper: version byte set to 2 (u16 BE at offset 4)",
+      "mutation" : "set container[4]=0x00, container[5]=0x02",
+      "expect_error" : "versionUnsupported"
+    },
+    {
+      "name" : "tamper: unsupported KDF id (offset 6)",
+      "mutation" : "set container[6]=0x02",
+      "expect_error" : "kdfUnsupported"
+    },
+    {
+      "name" : "tamper: truncated body",
+      "mutation" : "drop last 5 bytes",
+      "expect_error" : "malformed"
+    },
+    {
+      "name" : "tamper: flipped GCM tag bit",
+      "mutation" : "xor container[count-16] with 0x80",
+      "expect_error" : "authenticationFailed"
+    },
+    {
+      "name" : "tamper: flipped ciphertext bit",
+      "mutation" : "xor container[count-1] with 0x01",
+      "expect_error" : "authenticationFailed"
+    },
+    {
+      "name" : "wrong passphrase",
+      "mutation" : "decrypt canonical with 'not the fixture passphrase'",
+      "expect_error" : "authenticationFailed"
+    }
+  ]
+}

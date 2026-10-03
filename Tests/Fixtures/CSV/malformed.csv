@@ -1,0 +1,5 @@
+name,url,username,password,note
+Good Site,https://good.example,frank,pw-frank-1,fine
+Short Row,https://short.example,only-three
+Another Good,https://good2.example,hank,pw-hank-2,also fine
+"Unclosed Quote,https://bad.example,gina,pw-gina-1,broken

@@ -11,7 +11,7 @@ public enum KdbxWriter {
     /// Write options; defaults match KeePassXC's default database settings.
     public struct Options: Sendable {
         /// Outer cipher UUID.
-        public var cipherId: UUID = KdbxCrypto.aesCipherUUID // AES-256-CBC
+        public var cipherId: UUID = KdbxCrypto.aesCipherUUID
         /// KDF parameter dictionary (`$UUID` selects the KDF).
         public var kdfParameters: VariantDictionary = VariantDictionary()
         /// Payload compression.

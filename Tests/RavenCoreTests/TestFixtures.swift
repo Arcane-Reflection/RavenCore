@@ -1,3 +1,4 @@
+import CryptoKit
 import XCTest
 @testable import RavenCore
 
@@ -42,6 +43,72 @@ enum TestFixtures {
             throw NSError(domain: "TestFixtures", code: 1)
         }
         return try Data(contentsOf: url)
+    }
+
+    /// SHA-256 of `data` as lowercase hex — the pin format for fixture fidelity.
+    static func sha256Hex(_ data: Data) -> String {
+        Data(SHA256.hash(data: data)).map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+/// One-time generation of the canonical v2 baseline fixture from the *current*
+/// engine (Argon2id, formatVersion 2) — 04-01 fixture-first discipline: this
+/// baseline is minted BEFORE the organization-metadata extension (url/tags/
+/// folderID/folders) touches any format code, so the extension always has a
+/// pre-change v2 wire format to prove decode compatibility against.
+///   GENERATE_FIXTURES=1 swift test --filter CanonicalFixtureGenerationTests
+extension CanonicalFixtureGenerationTests {
+
+    func testGenerateCanonicalV2BaselineFixture() throws {
+        guard ProcessInfo.processInfo.environment["GENERATE_FIXTURES"] == "1" else {
+            throw XCTSkip("Set GENERATE_FIXTURES=1 to (re)generate canonical v2 baseline fixture")
+        }
+
+        let passphrase = "correct horse battery staple"
+        let vault = try VaultService.create(passphrase: passphrase)
+        _ = try vault.add(.password, level: .auto, payload: RecordPayload(
+            title: "GitHub", username: "u@example.com", password: "hunter2!", notes: "dev account"))
+        _ = try vault.add(.totp, level: .auto, payload: RecordPayload(
+            title: "SSO portal", username: "ops", totpSecret: "JBSWY3DPEHPK3PXP"))
+        let archivedId = try vault.add(.secureNote, level: .custom, payload: RecordPayload(
+            title: "Recovery note", notes: "pre-extension archived record"))
+        try vault.archive(id: archivedId)
+
+        let data = try vault.serializedDocument()
+        let dir = URL(fileURLWithPath: TestFixtures.ravenVaultDirectory)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try data.write(to: dir.appendingPathComponent("v2-baseline.json"))
+
+        let doc = try JSONDecoder().decode(VaultDocument.self, from: data)
+        XCTAssertEqual(doc.header.formatVersion, 2, "v2 baseline must pin formatVersion 2")
+        XCTAssertEqual(doc.header.kdfAlgorithm, VaultKDF.argon2id, "v2 baseline must pin Argon2id")
+        print("v2-baseline.json sha256 = \(TestFixtures.sha256Hex(data))")
+    }
+}
+
+/// Fidelity pins for the canonical fixtures (always-on). The v2 baseline is
+/// the pre-extension formatVersion-2 wire format — every future encoding
+/// change must keep it byte-identical or gate a deliberate re-pin (04-01
+/// fixture-first discipline).
+final class CanonicalFixturePinTests: XCTestCase {
+
+    func testV2BaselineFixtureIsPinned() throws {
+        let data = try TestFixtures.loadV1Fixture("v2-baseline.json")
+        XCTAssertEqual(
+            TestFixtures.sha256Hex(data),
+            "549a65f270bf512d96d434dc5063eb168fdd754786bc585497c529b5211819b5",
+            "v2-baseline.json changed — a deliberate format re-pin must accompany this diff")
+    }
+
+    /// The v2 baseline unlocks and round-trips through the current model —
+    /// the extension compatibility anchor (records survive, archived kept).
+    func testV2BaselineUnlocksAndCarriesRecords() throws {
+        let data = try TestFixtures.loadV1Fixture("v2-baseline.json")
+        let vault = try VaultService.unlock(serializedDocument: data, passphrase: "correct horse battery staple")
+        let records = try vault.records()
+        XCTAssertEqual(records.count, 3)
+        XCTAssertEqual(records.filter(\.isArchived).count, 1)
+        XCTAssertTrue(vault.verifyChain())
     }
 }
 

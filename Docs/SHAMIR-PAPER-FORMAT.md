@@ -158,3 +158,37 @@ printed paper strings. A conforming implementation must reproduce the paper
 strings byte-for-byte, decode them back to the pinned shares, reconstruct the
 secret from any `threshold`-of-`total` subset of paper strings, and reject
 every single-symbol corruption of every paper string.
+
+## 8. Recovery secret framing (Phase 7, D-01)
+
+The paper format above encodes *share values*; it is silent about what the
+split secret is. The Level 2 cold-storage ceremony splits **the vault master
+passphrase**, framed as a self-delimiting payload before it is handed to
+`ShamirSecretSharing.split`:
+
+```
+[0]      length L   (1 byte, big-endian, 1 ≤ L ≤ 254)
+[1..L]   passphrase UTF-8 bytes, verbatim (no normalization of any kind)
+```
+
+Rules:
+
+1. **The length prefix is required.** Without it, a secret whose bytes end in
+   zero would be ambiguous after reconstruction. The 1-byte prefix costs one
+   Crockford character of width and removes the ambiguity class entirely.
+2. **`1 ≤ L ≤ 254`** keeps the framed payload within the paper format's
+   255-byte share-value ceiling (§2), so any conforming passphrase split
+   prints at a fixed width.
+3. **No NFC or other normalization.** The bytes are exactly the `String` used
+   to unlock the vault; normalizing either end alone would produce a
+   passphrase that unlocks nothing.
+4. **Decode validates the UTF-8 round-trip** (re-encoding the reconstructed
+   String must reproduce the input bytes) and reports a mismatch as an error
+   rather than surfacing mojibake as a passphrase.
+
+This framing is a thin wrapper around the split input; the paper encoding
+itself (§1–§7) is unchanged. Machine-readable vectors live at
+[`Docs/TEST-VECTORS/shamir-passphrase-payload.json`](./TEST-VECTORS/shamir-passphrase-payload.json):
+each vector pins the passphrase, its framed payload bytes, the exact share
+value bytes, and the printed paper strings; any `threshold`-of-`total`
+subset of the paper strings must rebuild the exact passphrase.

@@ -122,4 +122,39 @@ final class CorpusGenerationTests: XCTestCase {
         )
         try data.write(to: URL(fileURLWithPath: out))
     }
+
+    // MARK: - Attachment fixture (05-01, kdbx⇄native import)
+
+    /// rv-attachment4.kdbx (us → us): a KDBX **4.0** attachment fixture.
+    /// The committed kxc-attachment.kdbx is 3.1 — its binary pool is opaque
+    /// (D-06) so its attachment bytes cannot exercise the import mapper.
+    /// This 4.x fixture pins the byte-level kdbx→native attachment contract
+    /// (InteropTests). Uniform corpus password, regenerable (not one-time):
+    ///   GENERATE_CORPUS=1 swift test --filter CorpusGenerationTests/testGenerateRavenCoreAttachment4Fixture
+    func testGenerateRavenCoreAttachment4Fixture() throws {
+        guard ProcessInfo.processInfo.environment["GENERATE_CORPUS"] == "1" else {
+            throw XCTSkip("Set GENERATE_CORPUS=1 to (re)generate rv-attachment4.kdbx")
+        }
+
+        let dir = URL(fileURLWithPath: TestFixtures.packageRoot)
+            .appendingPathComponent("Tests/Fixtures/Kdbx")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let credentials = try KdbxReader.Credentials(password: "correct-horse-battery")
+
+        var document = KdbxDocument()
+        document.meta.generator = "RavenVault"
+        var entry = KdbxEntry()
+        entry.setValue("Title", "WithFile4")
+        entry.setValue("UserName", "carol")
+        document.binaries.append(KdbxInnerHeader.Binary(flags: 0x01, content: Data(repeating: 0x41, count: 65536)))
+        entry.binaries.append(KdbxBinaryReference(key: "report4.bin", ref: 0))
+        document.root.entries.append(entry)
+
+        let data = try KdbxWriter.write(document, credentials: credentials)
+        try data.write(to: dir.appendingPathComponent("rv-attachment4.kdbx"))
+        // Self-check: our own reader must accept it and see the pool.
+        let reopened = try KdbxReader.read(data, credentials: credentials)
+        XCTAssertEqual(reopened.binaries.count, 1)
+        XCTAssertEqual(reopened.root.allEntries().first?.binaries.first?.key, "report4.bin")
+    }
 }
