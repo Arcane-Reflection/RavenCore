@@ -244,6 +244,39 @@ final class CsvTests: XCTestCase {
         XCTAssertNil(records[0].totpSecret, "unmatched target imports as nil (empty), never a placeholder string")
     }
 
+    /// `sourceRow` must be the record's true ordinal in the source file
+    /// (261003-mk7 FINDINGS-2 fix): a malformed record earlier in the stream
+    /// must not drag later rows below their real position — enumerating the
+    /// filtered `rows` array alone does exactly that.
+    func testSourceRowSkipsMalformedRecordsInBetween() throws {
+        // header(ordinal 0), good row(1), field-count mismatch(2), good row(3)
+        let document = try parse(
+            "name,url,username,password,note\n" +
+            "GitHub,https://github.com,alice,pw1,\n" +
+            "broken row with,only two fields\n" +
+            "Gitlab,https://gitlab.com,bob,pw2,\n")
+        XCTAssertEqual(document.malformedRows.map(\.index), [2])
+        XCTAssertEqual(document.rows.count, 2)
+
+        let records = VaultCSVMapper.mapRows(document: document, mapping: detect(document.headers))
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(records[0].sourceRow, 1)
+        XCTAssertEqual(records[1].sourceRow, 3, "malformed record at ordinal 2 → next good row keeps ordinal 3")
+    }
+
+    /// `rowIndices` is aligned 1:1 with `rows` and anchored to the same
+    /// content-record stream as `malformedRows` (header = 0) — blank lines
+    /// never become records, so they consume no ordinal.
+    func testRowIndicesAlignWithRowsAcrossBlankLines() throws {
+        let document = try parse(
+            "\nname,url,username,password,note\n" +   // leading blank: no ordinal
+            "GitHub,https://github.com,alice,pw1,\n" + // ordinal 1
+            "\n" +                                     // blank: no ordinal
+            "Gitlab,https://gitlab.com,bob,pw2,\n")    // ordinal 2
+        XCTAssertEqual(document.rows.count, 2)
+        XCTAssertEqual(document.rowIndices, [1, 2])
+    }
+
     // MARK: - Malformed fixture (report shape the app layer surfaces)
 
     func testMalformedFixtureCollectsExactIndicesAndReasons() throws {

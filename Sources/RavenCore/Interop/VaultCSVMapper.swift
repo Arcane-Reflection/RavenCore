@@ -82,7 +82,12 @@ public enum VaultCSVMapper {
         mapping: [Target: Int?]
     ) -> [CsvRowRecord] {
         var records: [CsvRowRecord] = []
-        for (rowIndex, row) in document.rows.enumerated() {
+        // `rowIndices` carries each row's source record ordinal (header = 0,
+        // first data record = 1 — the same stream `malformedRows` counts). A
+        // malformed record earlier in the file must not drag later rows'
+        // `sourceRow` below their true position (enumerating `rows` alone
+        // would).
+        for (recordIndex, row) in zip(document.rowIndices, document.rows) {
             func field(_ target: Target) -> String {
                 guard let column = mapping[target] ?? nil,
                       row.indices.contains(column) else { return "" }
@@ -119,7 +124,7 @@ public enum VaultCSVMapper {
                 url: url.isEmpty ? nil : url,
                 notes: field(.notes),
                 totpSecret: totpSecret,
-                sourceRow: rowIndex + 1,
+                sourceRow: recordIndex,
                 flagged: flagged))
         }
         return records

@@ -67,6 +67,41 @@ final class Kdbx31ReadTests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(start), 1.0)
     }
 
+    /// Hostile ceiling (261003-mk7 FINDINGS-2 fix): `UInt32.max` is still
+    /// ~16× above the interop-sane `maxKdfRounds` ceiling the 4.x path and the
+    /// `aesKdf` guard enforce — a declared count inside UInt32 range but above
+    /// 2^28 must reject fast, not run a multi-minute KDF before the
+    /// StreamStartBytes check.
+    func testTransformRoundsAboveMaxKdfRoundsRejected() throws {
+        let password = "legacy-v31-passphrase"
+        let file = try makeV31File(password: password, declaredRounds: AESECBCipher.maxKdfRounds + 1)
+        let credentials = try KdbxReader.Credentials(password: password)
+        let start = Date()
+        XCTAssertThrowsError(try KdbxReader.read(file, credentials: credentials)) { error in
+            XCTAssertEqual(error as? KdbxError, .unsupportedKdfParameters)
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(start), 1.0)
+    }
+
+    /// Unsupported-cipher rejection must precede the KDF (261003-mk7
+    /// FINDINGS-2 fix): the hostile combination "foreign cipher + absurd
+    /// rounds" reports the cipher, proving the cipher guard runs before the
+    /// round guard would have spent minutes deriving keys.
+    func testUnsupportedCipherRejectedBeforeKDF() throws {
+        let password = "legacy-v31-passphrase"
+        let foreign = UUID(uuidString: "DEADBEEF-0000-4000-8000-000000000001")!
+        let file = try makeV31File(
+            password: password,
+            declaredRounds: AESECBCipher.maxKdfRounds + 1,
+            cipherUUID: foreign)
+        let credentials = try KdbxReader.Credentials(password: password)
+        let start = Date()
+        XCTAssertThrowsError(try KdbxReader.read(file, credentials: credentials)) { error in
+            XCTAssertEqual(error as? KdbxError, .unsupportedCipher)
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(start), 1.0)
+    }
+
     /// Writing a 3.1 document always produces 4.0 (D-05, never write 3.1).
     func testWriting31DocumentProducesV40() throws {
         var document = KdbxDocument()
@@ -92,7 +127,8 @@ final class Kdbx31ReadTests: XCTestCase {
     private func makeV31File(
         password: String,
         keyFileKey: Data? = nil,
-        declaredRounds: UInt64 = 1_000
+        declaredRounds: UInt64 = 1_000,
+        cipherUUID: UUID? = KdbxCrypto.aesCipherUUID
     ) throws -> Data {
         let masterSeed = SecureRandom.bytes(count: 32)
         let transformSeed = SecureRandom.bytes(count: 32)
@@ -129,7 +165,9 @@ final class Kdbx31ReadTests: XCTestCase {
         headerBytes.writeUInt32(KdbxOuterHeader.signature1)
         headerBytes.writeUInt32(KdbxOuterHeader.signature2)
         headerBytes.writeUInt32(KdbxOuterHeader.version31)
-        writeField(&headerBytes, id: 2, value: KdbxCrypto.aesCipherUUID.data)
+        if let cipherUUID {
+            writeField(&headerBytes, id: 2, value: cipherUUID.data)
+        }
         writeField(&headerBytes, id: 4, value: masterSeed)
         writeField(&headerBytes, id: 5, value: transformSeed)
         var roundsBytes = ByteWriter()

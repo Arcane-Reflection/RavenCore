@@ -15,6 +15,12 @@ public struct CSVDocument: Sendable, Equatable {
     public var headers: [String]
     /// Well-formed data records (every field count == `headers.count`).
     public var rows: [[String]]
+    /// Source record ordinal (0-based over content records) for each entry in
+    /// `rows`, aligned 1:1. Malformed records in between do not shift these —
+    /// a row keeps its true stream position, consistent with the
+    /// `malformedRows` numbering. Empty lines never become records;
+    /// whitespace-only lines do (and consume an ordinal, then are filtered).
+    public var rowIndices: [Int]
     /// Malformed records, in file order. Never rendered with vault values —
     /// index + reason only.
     public var malformedRows: [(index: Int, reason: String)]
@@ -23,16 +29,19 @@ public struct CSVDocument: Sendable, Equatable {
     public init(
         headers: [String],
         rows: [[String]],
+        rowIndices: [Int],
         malformedRows: [(index: Int, reason: String)]
     ) {
         self.headers = headers
         self.rows = rows
+        self.rowIndices = rowIndices
         self.malformedRows = malformedRows
     }
 
     public static func == (lhs: CSVDocument, rhs: CSVDocument) -> Bool {
         lhs.headers == rhs.headers
             && lhs.rows == rhs.rows
+            && lhs.rowIndices == rhs.rowIndices
             && lhs.malformedRows.count == rhs.malformedRows.count
             && zip(lhs.malformedRows, rhs.malformedRows).allSatisfy {
                 $0.index == $1.index && $0.reason == $1.reason
@@ -186,6 +195,7 @@ public enum CSV {
 
         let headers = headerRecord.element.fields
         var rows: [[String]] = []
+        var rowIndices: [Int] = []
         var malformedRows: [(index: Int, reason: String)] = []
         if let headerReason = headerRecord.element.malformed {
             malformedRows.append((headerRecord.offset, headerReason))
@@ -199,9 +209,11 @@ public enum CSV {
                     "expected \(headers.count) fields, got \(record.fields.count)"))
             } else {
                 rows.append(record.fields)
+                rowIndices.append(index)
             }
         }
         return CSVDocument(
-            headers: headers, rows: rows, malformedRows: malformedRows)
+            headers: headers, rows: rows, rowIndices: rowIndices,
+            malformedRows: malformedRows)
     }
 }

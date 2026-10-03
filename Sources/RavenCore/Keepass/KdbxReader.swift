@@ -142,16 +142,24 @@ public enum KdbxReader {
             if id == 0 { break }
         }
 
-        // 3.1 KDF is fixed: AES-KDF with transformSeed/rounds.
+        // Cipher support is cheap to check and the KDF below is the expensive
+        // step — reject unsupported ciphers before any key derivation runs
+        // (a foreign-cipher file used to burn the full AES-KDF first).
+        guard cipherId == KdbxCrypto.aesCipherUUID else { throw KdbxError.unsupportedCipher }
+        // 3.1 KDF is fixed: AES-KDF with transformSeed/rounds. Field 6's R is
+        // hostile input: on 3.1 the KDF runs BEFORE the StreamStartBytes check
+        // (no header HMAC era). `aesKdf` already caps rounds at this same
+        // ceiling — the reader-level guard is consistent defense-in-depth with
+        // the 4.x composite-key path (`AESECBCipher.maxKdfRounds`, T-02-03),
+        // and fails at the header boundary instead of after composite-key work.
+        guard transformRounds >= 1, transformRounds <= AESECBCipher.maxKdfRounds else { throw KdbxError.unsupportedKdfParameters }
         let composite = try credentials.components().compositeKey()
-        guard transformRounds >= 1, transformRounds <= UInt64(UInt32.max) else { throw KdbxError.unsupportedKdfParameters }
         let transformed = try AESECBCipher.aesKdf(key32: composite, seed: transformSeed, rounds: transformRounds)
         // KDBX 3.1 final key (KeePassXC 2.7.12 Kdbx3Reader):
         // SHA-256(MasterSeed ‖ transformedKey). The AES-KDF itself already
         // includes a final SHA-256 over the ECB round output.
         let cipherKey = Hmac.sha256(masterSeed + transformed)
 
-        guard cipherId == KdbxCrypto.aesCipherUUID else { throw KdbxError.unsupportedCipher }
         guard streamStartBytes.count == 32 else { throw KdbxError.corruptFile }
 
         // Decrypt whole body, then verify StreamStartBytes prefix (MAC-then-encrypt era).

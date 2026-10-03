@@ -103,4 +103,19 @@ final class KdbxFidelityTests: XCTestCase {
             XCTAssertEqual(document.meta.customIcons.count, 1, "round \(round)")
         }
     }
+
+    /// KDBX4 base64 dates are Int64-LE seconds since 0001-01-01 and must map
+    /// onto the **Unix** epoch (261003-mk7 second-pass review: the decoded
+    /// value was fed to `timeIntervalSinceReferenceDate`, shifting every
+    /// KeePassXC-authored timestamp +31 years). ISO text (3.1) stays exact.
+    func testParseDateBase64UsesUnixEpoch() throws {
+        let unix = 1_767_225_600 // 2026-01-01T00:00:00Z
+        var writer = ByteWriter()
+        writer.writeUInt64(UInt64(unix) + 62_135_596_800) // seconds since 0001-01-01
+        let base64 = writer.data.base64EncodedString()
+
+        XCTAssertEqual(KdbxXML.Reader.parseDate(base64), Date(timeIntervalSince1970: TimeInterval(unix)))
+        XCTAssertEqual(KdbxXML.Reader.parseDate("2026-01-01T00:00:00Z"), Date(timeIntervalSince1970: TimeInterval(unix)))
+        XCTAssertNil(KdbxXML.Reader.parseDate("not-a-date"))
+    }
 }

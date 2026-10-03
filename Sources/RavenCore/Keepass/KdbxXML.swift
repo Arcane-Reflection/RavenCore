@@ -426,13 +426,14 @@ public enum KdbxXML {
         }
 
         static func parseDate(_ text: String) -> Date? {
-            // KDBX 4: ISO 8601 ("2026-09-11T00:00:00Z"); KDBX 3.1: Base64 of
-            // Int64-LE seconds since 0001-01-01.
+            // KDBX 4: Base64 of Int64-LE seconds since 0001-01-01 (KeePassXC
+            // writeDatetime); KDBX 3.1: ISO 8601 text. Readers accept both at
+            // either version, so try ISO first, then base64.
             if let date = try? Self.isoFormat.parse(text) { return date }
             if let data = Data(base64Encoded: text), data.count == 8 {
                 var reader = ByteReader(data)
                 if let seconds = try? reader.readUInt64() {
-                    return Date(timeIntervalSinceReferenceDate: TimeInterval(Int64(bitPattern: seconds) - 62_135_596_800))
+                    return Date(timeIntervalSince1970: TimeInterval(Int64(bitPattern: seconds) - 62_135_596_800))
                 }
             }
             return nil
