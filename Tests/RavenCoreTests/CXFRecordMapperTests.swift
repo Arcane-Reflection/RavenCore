@@ -185,6 +185,30 @@ final class CXFRecordMapperTests: XCTestCase {
             "the spine carries the first sibling's secret — order is stable, no overwrite")
     }
 
+    /// Order independence (fifth-pass follow-up): a TOTP credential BEFORE
+    /// the item's password used to become a standalone record plus a bare
+    /// password — the same manifest imported differently by array order.
+    /// Both orders must now produce the identical combined record.
+    func testTOTPBeforePasswordAttachesToTheSpine() {
+        func map(_ credentials: [CXFRecordMapper.SourceCredential]) -> CXFRecordMapper.Report {
+            CXFRecordMapper.map(accounts: [
+                .init(userName: "otter", items: [
+                    .init(title: "Spine", credentials: credentials),
+                ]),
+            ])
+        }
+
+        let totpFirst = map([sampleTOTP(0x01), .basicAuthentication(userName: "otter", password: "pw")])
+        let basicFirst = map([.basicAuthentication(userName: "otter", password: "pw"), sampleTOTP(0x01)])
+
+        XCTAssertEqual(totpFirst.added, basicFirst.added,
+                       "credential array order must not change the import result")
+        XCTAssertEqual(totpFirst.skipped, basicFirst.skipped)
+        XCTAssertEqual(totpFirst.added.count, 1)
+        XCTAssertEqual(totpFirst.added[0].type, .password)
+        XCTAssertEqual(totpFirst.added[0].payload.totpSecret, Base32.encode([0x01]))
+    }
+
     func testSpinelessTOTPsStillBecomeSeparateRecords() {
         let report = CXFRecordMapper.map(accounts: [
             .init(userName: "otter", items: [

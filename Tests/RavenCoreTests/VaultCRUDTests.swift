@@ -13,6 +13,67 @@ final class VaultCRUDTests: XCTestCase {
         try VaultService.create(passphrase: passphrase)
     }
 
+    // MARK: - Chain verify (261003-mk7 sixth pass: tamper evidence enforced)
+
+    /// A single flipped byte in the log payload (post-auth tamper) must fail
+    /// unlock with corruptDocument — the GCM envelope only authenticates the
+    /// key wrap; the hash chain + header pairing is the log's own gate.
+    func testTamperedLogEntryFailsUnlock() throws {
+        let vault = try makeVault()
+        try vault.add(.password, level: .auto, payload: RecordPayload(title: "T", password: "p"))
+        var data = try vault.serializedDocument()
+
+        // Flip one byte deep inside the document (log region — past header).
+        let index = data.index(data.endIndex, offsetBy: -3)
+        data[index] ^= 0xFF
+
+        XCTAssertThrowsError(try VaultService.unlock(serializedDocument: data, passphrase: passphrase)) { error in
+            XCTAssertEqual(error as? VaultError, .corruptDocument)
+        }
+    }
+
+    /// A desynced header.headHash (log truncated or header rewritten) fails
+    /// the pairing half of the gate.
+    func testDesyncedHeadHashFailsUnlock() throws {
+        let vault = try makeVault()
+        try vault.add(.password, level: .auto, payload: RecordPayload(title: "T", password: "p"))
+        var document = try JSONDecoder().decode(VaultDocument.self, from: vault.serializedDocument())
+        document.log.entries.removeLast() // truncate the log under the pinned head
+        let tampered = try JSONEncoder().encode(document)
+
+        XCTAssertThrowsError(try VaultService.unlock(serializedDocument: tampered, passphrase: passphrase)) { error in
+            XCTAssertEqual(error as? VaultError, .corruptDocument)
+        }
+    }
+
+    /// Wrong passphrase keeps error precedence over the integrity gate — the
+    /// tamper gate adds no oracle (the GCM check runs first).
+    func testWrongPassphrasePrecedesChainGate() throws {
+        let vault = try makeVault()
+        try vault.add(.password, level: .auto, payload: RecordPayload(title: "T", password: "p"))
+        let data = try vault.serializedDocument()
+        XCTAssertThrowsError(try VaultService.unlock(serializedDocument: data, passphrase: "wrong")) { error in
+            XCTAssertEqual(error as? VaultError, .wrongPassphrase)
+        }
+    }
+
+    /// The legitimate mutation→save cycle keeps header.headHash paired
+    /// without the removed serializedDocument restamp — the gate must never
+    /// reject a vault the engine itself wrote.
+    func testMutatedVaultSerializesWithPairedHeadHash() throws {
+        let vault = try makeVault()
+        try vault.add(.password, level: .auto, payload: RecordPayload(title: "A", password: "p1"))
+        try vault.add(.password, level: .auto, payload: RecordPayload(title: "B", password: "p2"))
+        try vault.archive(id: try vault.records().first { $0.payload.title == "A" }!.id)
+
+        let data = try vault.serializedDocument()
+        let reopened = try VaultService.unlock(serializedDocument: data, passphrase: passphrase)
+        // records() includes archived rows (D-05) — A survives, still archived.
+        let records = try reopened.records()
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(records.first { $0.payload.title == "A" }?.isArchived, true)
+    }
+
     // MARK: - Extension decode compatibility (fixture-first anchor)
 
     /// The PRE-extension canonical v2 baseline decodes under the extended

@@ -204,6 +204,17 @@ public final class VaultService {
             throw VaultError.wrongPassphrase
         }
         let service = VaultService(document: document, keyBytes: keyData)
+        // Tamper evidence, enforced (chain-verify design, 261003-mk7 sixth
+        // pass): the GCM check above authenticates the key envelope only —
+        // the log itself is hash-chained, and the header pins its head. A
+        // truncated or modified log now fails closed at unlock instead of
+        // opening with partial history and letting the next save restamp
+        // header.headHash over the residue. Wrong passphrase still wins the
+        // error race (checked before this): no oracle is added.
+        guard document.log.verify(),
+              document.header.headHash == document.log.headHash else {
+            throw VaultError.corruptDocument
+        }
         // D-04: capture the legacy passphrase so the next save can upgrade the
         // header to Argon2id. Consumed (and scrubbed) by upgradeIfNeeded.
         if document.header.formatVersion < VaultService.formatVersion,
@@ -404,16 +415,23 @@ public final class VaultService {
         let decoder = JSONDecoder()
         var byId: [UUID: [(at: Date, version: RecordVersion)]] = [:]
         for entry in document.log.entries {
-            let sealed = try decoder.decode(SealedPayload.self, from: entry.payload)
-            let envelopeData = try AESGCMCipher.decrypt(sealed, key: dataKey)
-            let envelope = try decoder.decode(RecordEnvelope.self, from: envelopeData)
-            let version = RecordVersion(
-                payload: envelope.record,
-                tags: envelope.tags,
-                folderID: envelope.folderID,
-                attachments: envelope.attachments,
-                at: entry.createdAt)
-            byId[entry.id, default: []].append((entry.createdAt, version))
+            do {
+                let sealed = try decoder.decode(SealedPayload.self, from: entry.payload)
+                let envelopeData = try AESGCMCipher.decrypt(sealed, key: dataKey)
+                let envelope = try decoder.decode(RecordEnvelope.self, from: envelopeData)
+                let version = RecordVersion(
+                    payload: envelope.record,
+                    tags: envelope.tags,
+                    folderID: envelope.folderID,
+                    attachments: envelope.attachments,
+                    at: entry.createdAt,
+                    type: envelope.type,
+                    level: envelope.level)
+                byId[entry.id, default: []].append((entry.createdAt, version))
+            } catch {
+                // One vocabulary (same discipline as decryptAllRecords).
+                throw VaultError.corruptDocument
+            }
         }
         var result: [UUID: [RecordVersion]] = [:]
         for (id, versions) in byId {
@@ -466,25 +484,33 @@ public final class VaultService {
     }
 
     /// Decrypts every log entry to its envelope snapshot (id/createdAt/
-    /// archived state included — the raw per-entry view, pre-dedupe).
+    /// archived state included — the raw per-entry view, pre-dedupe). Any
+    /// per-entry decode/decrypt failure is document corruption in the one
+    /// vocabulary — never a raw DecodingError/RavenCryptoError bubbling to
+    /// the caller (fourth-pass review; unreachable post-unlock-verify except
+    /// for in-memory misuse, kept as defense-in-depth).
     private func decryptAllRecords() throws -> [DecryptedRecord] {
         let dataKey = try materializedKey() // transient: scope-local copy
         let decoder = JSONDecoder()
         return try document.log.entries.map { entry in
-            let sealed = try decoder.decode(SealedPayload.self, from: entry.payload)
-            let envelopeData = try AESGCMCipher.decrypt(sealed, key: dataKey)
-            let envelope = try decoder.decode(RecordEnvelope.self, from: envelopeData)
-            return DecryptedRecord(
-                id: entry.id,
-                createdAt: entry.createdAt,
-                type: envelope.type,
-                level: envelope.level,
-                payload: envelope.record,
-                tags: envelope.tags,
-                folderID: envelope.folderID,
-                attachments: envelope.attachments,
-                isArchived: entry.isArchived
-            )
+            do {
+                let sealed = try decoder.decode(SealedPayload.self, from: entry.payload)
+                let envelopeData = try AESGCMCipher.decrypt(sealed, key: dataKey)
+                let envelope = try decoder.decode(RecordEnvelope.self, from: envelopeData)
+                return DecryptedRecord(
+                    id: entry.id,
+                    createdAt: entry.createdAt,
+                    type: envelope.type,
+                    level: envelope.level,
+                    payload: envelope.record,
+                    tags: envelope.tags,
+                    folderID: envelope.folderID,
+                    attachments: envelope.attachments,
+                    isArchived: entry.isArchived
+                )
+            } catch {
+                throw VaultError.corruptDocument
+            }
         }
     }
 
@@ -539,9 +565,13 @@ public final class VaultService {
     // MARK: - Persistence
 
     /// Serializes the document (upgrading a legacy header first, D-04).
+    /// No headHash restamp here: every mutation (`appendEnvelope`, `compact`)
+    /// already keeps `header.headHash` paired with the log, and re-deriving
+    /// it from the log at save time would launder tamper residue on an
+    /// unlocked-but-tampered document (chain-verify, sixth pass) — the
+    /// unlock gate rejects such documents before any save can happen.
     public func serializedDocument() throws -> Data {
         try upgradeIfNeeded()
-        document.header.headHash = document.log.headHash
         return try JSONEncoder().encode(document)
     }
 
@@ -569,6 +599,10 @@ public final class VaultService {
             throw VaultError.wrongPassphrase
         }
         let keyBytes = unwrapped.rawRepresentation // transient: stored in the scrubbed `dataKeyBytes` field
-        return VaultService(document: document, keyBytes: keyBytes)
+        let service = VaultService(document: document, keyBytes: keyBytes)
+        // Same tamper-evidence gate as the passphrase unlock: the device wrap
+        // authenticates the key envelope, not the log.
+        guard service.verifyChain() else { throw VaultError.corruptDocument }
+        return service
     }
 }

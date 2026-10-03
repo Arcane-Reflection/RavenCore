@@ -150,9 +150,15 @@ public enum CXFRecordMapper {
                     skipped.append(Skip(title: title, reason: "empty"))
                     continue
                 }
-                // Index of this item's password record — the attach point
-                // for a sibling TOTP credential.
+                // Two passes so the TOTP attach decision is ORDER-INDEPENDENT
+                // (fifth-pass review: [totp, basic] used to produce a
+                // standalone TOTP record plus a bare password, while
+                // [basic, totp] combined them — same manifest, two results).
+                // Pass 1 creates the structural credentials in file order and
+                // collects the item's generator secrets; pass 2 attaches them
+                // to the item's spine (its first password record).
                 var spineIndex: Int?
+                var pendingTOTPs: [(composed: String, userName: String)] = []
                 for credential in item.credentials {
                     switch credential {
                     case .basicAuthentication(let userName, let password):
@@ -160,7 +166,7 @@ public enum CXFRecordMapper {
                             skipped.append(Skip(title: title, reason: "empty"))
                             continue
                         }
-                        spineIndex = added.count
+                        if spineIndex == nil { spineIndex = added.count }
                         added.append(Entry(
                             type: .password,
                             payload: RecordPayload(
@@ -174,27 +180,10 @@ public enum CXFRecordMapper {
                             secret: secret, period: period, digits: digits,
                             userName: userName ?? item.title,
                             algorithm: algorithm, issuer: issuer) {
-                            if let index = spineIndex {
-                                if added[index].payload.totpSecret != nil {
-                                    // E14 honesty (06 review WR-03): the spine
-                                    // already carries a generator secret — the
-                                    // sibling TOTP is a NAMED loss, never a
-                                    // silent overwrite.
-                                    skipped.append(Skip(title: title, reason: "duplicateTotp"))
-                                } else {
-                                    var payload = added[index].payload
-                                    payload.totpSecret = composed
-                                    added[index] = Entry(type: added[index].type, payload: payload)
-                                }
-                            } else {
-                                added.append(Entry(
-                                    type: .totp,
-                                    payload: RecordPayload(
-                                        title: title,
-                                        username: userName ?? "",
-                                        totpSecret: composed,
-                                        url: item.urls.first)))
-                            }
+                            // The standalone (no-spine) shape keeps this
+                            // credential's own username, so the pair rides
+                            // through collection.
+                            pendingTOTPs.append((composed, userName ?? ""))
                         } else {
                             skipped.append(Skip(title: title, reason: "unreadableTotp"))
                         }
@@ -217,6 +206,33 @@ public enum CXFRecordMapper {
                         }
                     case .unsupported(let kind):
                         skipped.append(Skip(title: title, reason: "unsupported.\(kind)"))
+                    }
+                }
+                // Pass 2 — attach the collected TOTPs: the first fills the
+                // spine (or becomes a standalone `.totp` record when the item
+                // has no password at all — the no-spine shape); the rest are
+                // named duplicateTotp skips, never silent overwrites.
+                for pending in pendingTOTPs {
+                    if let index = spineIndex {
+                        if added[index].payload.totpSecret != nil {
+                            // E14 honesty (06 review WR-03): the spine
+                            // already carries a generator secret — the
+                            // sibling TOTP is a NAMED loss, never a
+                            // silent overwrite.
+                            skipped.append(Skip(title: title, reason: "duplicateTotp"))
+                        } else {
+                            var payload = added[index].payload
+                            payload.totpSecret = pending.composed
+                            added[index] = Entry(type: added[index].type, payload: payload)
+                        }
+                    } else {
+                        added.append(Entry(
+                            type: .totp,
+                            payload: RecordPayload(
+                                title: title,
+                                username: pending.userName,
+                                totpSecret: pending.composed,
+                                url: item.urls.first)))
                     }
                 }
             }

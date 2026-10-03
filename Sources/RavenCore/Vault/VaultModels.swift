@@ -243,6 +243,13 @@ public struct RecordVersion: Sendable, Equatable {
     public let attachments: [RecordAttachment]?
     /// Version timestamp (the log entry's `createdAt`).
     public let at: Date
+    /// The record type at this version, if the envelope carried one —
+    /// absent in pre-field versions, where replays fall back to the
+    /// current record's type (fourth-pass review: restore paths used to
+    /// stamp the CURRENT type onto all historical versions).
+    public let type: RecordType?
+    /// The security level at this version (same tolerance as `type`).
+    public let level: SecurityLevel?
 
     /// Creates a version view; used by `VaultService.allVersions()`.
     public init(
@@ -250,13 +257,17 @@ public struct RecordVersion: Sendable, Equatable {
         tags: [String]?,
         folderID: UUID?,
         attachments: [RecordAttachment]?,
-        at: Date
+        at: Date,
+        type: RecordType? = nil,
+        level: SecurityLevel? = nil
     ) {
         self.payload = payload
         self.tags = tags
         self.folderID = folderID
         self.attachments = attachments
         self.at = at
+        self.type = type
+        self.level = level
     }
 }
 
