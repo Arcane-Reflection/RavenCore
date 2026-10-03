@@ -48,6 +48,20 @@ final class HealthIndexTests: XCTestCase {
         XCTAssertFalse(report.weakHitRecordIDs.contains(strongID))
     }
 
+    /// Hostile-but-authentic vault dates (raw JSON doubles: ±1e308, ±inf)
+    /// must clamp instead of trapping `Int(Double)` in either direction
+    /// (fourth + fifth pass: `Double(Int.max)` rounds UP to 2^63, itself
+    /// unconvertible — the clamp bound must be strictly representable).
+    func testHostileDatesClampInsteadOfTrap() {
+        let distantFuture = Date(timeIntervalSinceReferenceDate: 1e308)
+        let distantPast = Date(timeIntervalSinceReferenceDate: -1e308)
+        let report = HealthIndex.evaluate(records: [
+            record(UUID(), password: "letmein", createdAt: distantFuture),
+            record(UUID(), password: "letmein", createdAt: distantPast),
+        ], now: { Self.fixedNow })
+        XCTAssertEqual(Set(report.passwordAgeDays.values), Set([0, 4_000_000_000_000_000_000]))
+    }
+
     // MARK: - Behavior 2: reuse groups keyed by SHA-256, never plaintext
 
     func testSharedPasswordLandsInOneReuseGroupKeyedBySHA256WithoutPlaintext() throws {

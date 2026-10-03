@@ -231,6 +231,7 @@ public enum MirrorContainer {
         // a foreign `KeyDerivationError` escape `decrypt` (out-of-domain
         // values in either direction used to).
         guard info.memoryKiB >= 8, info.memoryKiB <= KeyDerivation.hostileMaxMemoryKiB,
+              info.timeCost >= 1,
               info.parallelism >= 1, info.parallelism <= KeyDerivation.hostileMaxParallelism else {
             throw MirrorError.kdfParametersUnsupported
         }

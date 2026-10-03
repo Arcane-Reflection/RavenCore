@@ -219,8 +219,11 @@ final class CsvTests: XCTestCase {
         XCTAssertFalse(records[0].flagged)
         XCTAssertEqual(records[1].totpSecret, "JBSWY3DPEHPK3PXPUZRQ", "bare secret stored verbatim")
         XCTAssertFalse(records[1].flagged)
-        XCTAssertNil(records[2].totpSecret, "URI without secret parameter → nil")
-        XCTAssertTrue(records[2].flagged, "unreadable TOTP flags the row — never a silent drop")
+        XCTAssertEqual(
+            records[2].totpSecret,
+            "otpauth://totp/kate?period=30",
+            "URI without secret parameter stored verbatim — no secret to lose, and the engine's unavailability state is honest (fourth pass)")
+        XCTAssertFalse(records[2].flagged)
     }
 
     func testOtpauthSecretUnitBehavior() {

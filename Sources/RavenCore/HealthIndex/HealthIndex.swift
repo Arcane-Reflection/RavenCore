@@ -135,7 +135,13 @@ public enum HealthIndex {
 
     /// Whole days between `from` and `to`, floored; a same-day or future
     /// timestamp honestly reports 0 — the proxy clock never lies forward.
+    /// The Double is clamped before the Int conversion — on BOTH ends:
+    /// `Double(Int.max)` rounds UP to 2^63, which itself is out of Int
+    /// range, so the clamp bound must be a strictly representable value
+    /// (fifth-pass review: `Int(min(max(days, 0), Double(Int.max)))` still
+    /// trapped on a hostile `-1e308` createdAt).
     private static func ageDays(from createdAt: Date, to now: Date) -> Int {
-        max(0, Int(now.timeIntervalSince(createdAt) / 86_400))
+        let days = now.timeIntervalSince(createdAt) / 86_400
+        return Int(min(max(days, 0), 4.0e18))
     }
 }

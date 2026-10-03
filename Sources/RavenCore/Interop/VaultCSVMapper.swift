@@ -107,19 +107,24 @@ public enum VaultCSVMapper {
 
             var totpSecret: String?
             let rawTotp = field(.totp)
-            if !rawTotp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                if OTPAuthURIParser.parse(rawTotp) != nil {
-                    // A full otpauth URI is stored VERBATIM so generation
-                    // parameters (period/digits/algorithm) survive — RFC
-                    // defaults would confidently serve wrong codes for
-                    // non-default entries (261003-mk7 second pass; the old
-                    // bare-secret strip broke both import paths alike).
-                    totpSecret = rawTotp.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedTotp = rawTotp.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedTotp.isEmpty {
+                if trimmedTotp.lowercased().hasPrefix("otpauth://") {
+                    // A full otpauth URI is stored VERBATIM — strict validity
+                    // decides only whether the engine can GENERATE from it
+                    // (out-of-domain parameters land in the honest
+                    // "TOTP unavailable" state), never whether the data
+                    // survives (261003-mk7 fourth pass: the bare-secret
+                    // fallback served RFC-default codes for 5-digit/Steam
+                    // entries).
+                    totpSecret = trimmedTotp
                 } else if let secret = otpauthSecret(from: rawTotp) {
                     totpSecret = secret
                 } else {
-                    // Unreadable TOTP value → empty + flag; the record still
-                    // imports (counting beats aborting for data).
+                    // Defensively unreachable (fifth-pass review): a
+                    // non-empty non-URI value always yields a bare secret
+                    // from `otpauthSecret` — kept so a future branch reorder
+                    // cannot silently drop data.
                     flagged = true
                 }
             }

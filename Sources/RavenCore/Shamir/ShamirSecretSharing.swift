@@ -66,7 +66,10 @@ public enum ShamirSecretSharing {
 
     /// Reconstructs the secret from at least `threshold` shares with distinct indices.
     public static func combine(shares: [ShamirShare], threshold: Int) throws -> Data {
-        guard shares.count >= threshold else { throw ShamirError.notEnoughShares }
+        // Fourth-pass review: `threshold = 0` (caller misuse) passed every
+        // later guard and trapped on `selected[0]` — guard the lower bound
+        // like every other public boundary.
+        guard threshold >= 1, shares.count >= threshold else { throw ShamirError.notEnoughShares }
 
         var byIndex = [UInt8: ShamirShare]()
         for share in shares {

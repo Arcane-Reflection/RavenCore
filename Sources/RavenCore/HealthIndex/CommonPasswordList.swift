@@ -87,12 +87,20 @@ enum CommonPasswordList {
         }
 
         var passwords = Set<String>(minimumCapacity: expectedLineCount)
+        var blankLines = 0
         for line in lines {
             guard let entry = String(data: Data(line), encoding: .utf8) else {
                 throw CommonPasswordListError.corpusCorrupt
             }
-            // The one upstream blank line is data, not a password.
-            guard !entry.isEmpty else { continue }
+            // The one upstream blank line is data, not a password — and it
+            // is the ONLY tolerated one (fourth-pass review: unbounded
+            // blanks would let a tampered resource silently shrink the
+            // corpus while keeping the line count).
+            if entry.isEmpty {
+                blankLines += 1
+                guard blankLines <= 1 else { throw CommonPasswordListError.corpusCorrupt }
+                continue
+            }
             guard passwords.insert(entry).inserted else {
                 throw CommonPasswordListError.corpusCorrupt
             }

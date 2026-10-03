@@ -492,12 +492,15 @@ public enum KdbxVaultMapper {
             }
             // URI-shaped but strict parse failed (e.g. digits outside the
             // engine's generation domain — KeePassXC's Steam preset writes
-            // digits=5): fall back to the bare-secret extraction so the seed
-            // survives; parity with the CSV path. Values in NO known shape
-            // (garbage) stay nil — they are not seeds.
-            if otp.lowercased().hasPrefix("otpauth://"),
-               let secret = OTPAuthURIParser.secret(in: otp), !secret.isEmpty {
-                return secret
+            // digits=5): store the URI VERBATIM. Fourth-pass review: the
+            // bare-secret fallback made every consumer generate RFC-default
+            // codes for what the source declares differently — silently
+            // wrong beats nothing only when it isn't wrong. Verbatim lands
+            // the record in the honest "TOTP unavailable" state and keeps
+            // the parameters for re-export. Garbage in no known shape stays
+            // nil — it is not a seed.
+            if otp.lowercased().hasPrefix("otpauth://") {
+                return otp
             }
         }
         // 2. KeePass2 `TimeOtp-*` family.
@@ -511,16 +514,11 @@ public enum KdbxVaultMapper {
         }
         // 3. Any other attribute carrying an otpauth URI (scheme matched
         //    case-insensitively — the parser is, so the gate must be).
-        //    Kept verbatim when it strictly parses; lenient bare-secret
-        //    fallback otherwise — never a silent drop.
+        //    Always verbatim: strict validity decides only whether the
+        //    engine can GENERATE from it, never whether the data survives.
         for string in entry.strings
         where string.value.lowercased().hasPrefix("otpauth://") {
-            if OTPAuthURIParser.parse(string.value) != nil {
-                return string.value
-            }
-            if let secret = OTPAuthURIParser.secret(in: string.value), !secret.isEmpty {
-                return secret
-            }
+            return string.value
         }
         return nil
     }

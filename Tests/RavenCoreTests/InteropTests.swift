@@ -378,11 +378,13 @@ final class InteropTests: XCTestCase {
                      "unparseable otp value → absent, never silently consumed")
 
         // digits=5 (KeePassXC Steam preset) is outside the engine generation
-        // domain — strict parse fails, but the seed must survive via the
-        // lenient fallback (third-pass review: it used to drop silently).
+        // domain — the URI is stored VERBATIM so the record lands in the
+        // honest "TOTP unavailable" state instead of generating RFC-default
+        // codes for a 5-digit source (fourth-pass review: the bare-secret
+        // fallback silently served wrong codes).
         XCTAssertEqual(
             content.records.first { $0.payload.title == "steam entry" }?.payload.totpSecret,
-            "JBSWY3DPEHPK3PXP")
+            "otpauth://totp/Steam:me?secret=JBSWY3DPEHPK3PXP&period=30&digits=5&issuer=Steam")
 
         // Duplicate query keys in a hostile otp value must not trap the
         // importer (third-pass review: Dictionary(uniqueKeysWithValues:));
